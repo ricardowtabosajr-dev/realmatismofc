@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Plus, Users, Trophy, LayoutDashboard, Trash2, Phone, Calendar, Clock, MapPin, DollarSign, Share2 } from 'lucide-react'
+import { Plus, Users, Trophy, LayoutDashboard, Trash2, Edit2, Phone, Calendar, Clock, MapPin, DollarSign, Share2 } from 'lucide-react'
 import type { Athlete, Game, PlayerPosition, TeamConfig } from './types'
 import { DEFAULT_POSITIONS } from './types'
 import { supabase } from './lib/supabase'
@@ -128,13 +128,17 @@ export default function App() {
     if (!newAthlete.name || !newAthlete.phone) return
 
     const athlete: Athlete = {
-      id: crypto.randomUUID(),
+      id: newAthlete.id || crypto.randomUUID(),
       name: newAthlete.name,
       position: newAthlete.position as PlayerPosition,
       phone: newAthlete.phone
     }
 
-    setAthletes([...athletes, athlete])
+    if (newAthlete.id) {
+      setAthletes(athletes.map(a => a.id === newAthlete.id ? athlete : a))
+    } else {
+      setAthletes([...athletes, athlete])
+    }
     
     if (supabase) {
       await supabase.from('athletes').upsert({
@@ -147,6 +151,11 @@ export default function App() {
 
     setNewAthlete({ name: '', position: 'Meio-campo', phone: '' })
     setIsAddingAthlete(false)
+  }
+
+  const handleEditAthlete = (athlete: Athlete) => {
+    setNewAthlete(athlete)
+    setIsAddingAthlete(true)
   }
 
   const handleAddPosition = async (e: React.FormEvent) => {
@@ -557,7 +566,10 @@ export default function App() {
               </div>
               <button 
                 className="btn-primary flex items-center gap-2"
-                onClick={() => setIsAddingAthlete(true)}
+                onClick={() => {
+                  setNewAthlete({ name: '', position: 'Meio-campo', phone: '' });
+                  setIsAddingAthlete(true);
+                }}
               >
                 <Plus size={20} />
                 Novo Atleta
@@ -583,12 +595,20 @@ export default function App() {
                           <span>{athlete.phone}</span>
                         </div>
                       </div>
-                      <button 
-                        onClick={() => deleteAthlete(athlete.id)}
-                        style={{ color: 'var(--danger)', padding: '8px', background: 'transparent' }}
-                      >
-                        <Trash2 size={18} />
-                      </button>
+                      <div className="flex gap-1">
+                        <button 
+                          onClick={() => handleEditAthlete(athlete)}
+                          style={{ color: 'var(--primary)', padding: '8px', background: 'transparent' }}
+                        >
+                          <Edit2 size={18} />
+                        </button>
+                        <button 
+                          onClick={() => deleteAthlete(athlete.id)}
+                          style={{ color: 'var(--danger)', padding: '8px', background: 'transparent' }}
+                        >
+                          <Trash2 size={18} />
+                        </button>
+                      </div>
                     </div>
                   </div>
                 ))}
@@ -687,7 +707,7 @@ export default function App() {
         {isAddingAthlete && (
           <div className="modal-overlay">
             <div className="modal-content card" style={{ width: '100%', maxWidth: '400px' }}>
-              <h2>Novo Atleta</h2>
+              <h2>{newAthlete.id ? 'Editar Atleta' : 'Novo Atleta'}</h2>
               <form onSubmit={handleAddAthlete} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                 <div>
                   <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.875rem' }}>Nome Completo</label>
