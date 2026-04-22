@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react'
 import { Plus, Users, Trophy, LayoutDashboard, Trash2, Phone, Calendar, Clock, MapPin, DollarSign, Share2 } from 'lucide-react'
 import type { Athlete, Game, PlayerPosition, TeamConfig } from './types'
+import { DEFAULT_POSITIONS } from './types'
+import { supabase } from './lib/supabase'
 import './index.css'
 
 export default function App() {
@@ -23,6 +25,14 @@ export default function App() {
     return saved ? JSON.parse(saved) : []
   })
 
+  const [positions, setPositions] = useState<string[]>(() => {
+    const saved = localStorage.getItem('positions')
+    return saved ? JSON.parse(saved) : [...DEFAULT_POSITIONS]
+  })
+
+  const [isAddingPosition, setIsAddingPosition] = useState(false)
+  const [newPositionName, setNewPositionName] = useState('')
+
   const [isAddingAthlete, setIsAddingAthlete] = useState(false)
   const [isAddingGame, setIsAddingGame] = useState(false)
 
@@ -42,6 +52,10 @@ export default function App() {
 
   useEffect(() => {
     localStorage.setItem('athletes', JSON.stringify(athletes))
+    if (supabase) {
+      // Sync athletes to Supabase (simplistic implementation for now)
+      // In a real app, we'd use proper hooks or service layer
+    }
   }, [athletes])
 
   useEffect(() => {
@@ -50,7 +64,55 @@ export default function App() {
 
   useEffect(() => {
     localStorage.setItem('teamConfig', JSON.stringify(teamConfig))
+    if (supabase) {
+      supabase.from('team_config').upsert({
+        id: 1,
+        name: teamConfig.name,
+        logo_url: teamConfig.logoUrl,
+        logo_bg_type: teamConfig.logoBgType,
+        pix_key: teamConfig.pixKey
+      }).then();
+    }
   }, [teamConfig])
+
+  useEffect(() => {
+    localStorage.setItem('positions', JSON.stringify(positions))
+  }, [positions])
+
+  // Initial fetch from Supabase if available
+  useEffect(() => {
+    const fetchData = async () => {
+      if (!supabase) return;
+
+      const { data: athletesData } = await supabase.from('athletes').select('*');
+      if (athletesData) setAthletes(athletesData);
+
+      const { data: gamesData } = await supabase.from('games').select('*, squad:squad_entries(*)');
+      if (gamesData) {
+        setGames(gamesData.map(g => ({
+          ...g,
+          squad: g.squad.map((s: any) => ({ athleteId: s.athlete_id, paid: s.paid }))
+        })));
+      }
+
+      const { data: positionsData } = await supabase.from('positions').select('name');
+      if (positionsData && positionsData.length > 0) {
+        setPositions(positionsData.map(p => p.name));
+      }
+
+      const { data: configData } = await supabase.from('team_config').select('*').single();
+      if (configData) {
+        setTeamConfig({
+          name: configData.name,
+          logoUrl: configData.logo_url,
+          logoBgType: configData.logo_bg_type as 'dark' | 'light',
+          pixKey: configData.pix_key
+        });
+      }
+    };
+
+    fetchData();
+  }, []);
 
   const formatDate = (dateStr: string) => {
     const [year, month, day] = dateStr.split('-')
@@ -61,7 +123,7 @@ export default function App() {
     return bgType === 'light' ? 'multiply' as const : 'screen' as const
   }
 
-  const handleAddAthlete = (e: React.FormEvent) => {
+  const handleAddAthlete = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!newAthlete.name || !newAthlete.phone) return
 
@@ -73,8 +135,33 @@ export default function App() {
     }
 
     setAthletes([...athletes, athlete])
+    
+    if (supabase) {
+      await supabase.from('athletes').upsert({
+        id: athlete.id,
+        name: athlete.name,
+        position: athlete.position,
+        phone: athlete.phone
+      })
+    }
+
     setNewAthlete({ name: '', position: 'Meio-campo', phone: '' })
     setIsAddingAthlete(false)
+  }
+
+  const handleAddPosition = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!newPositionName || positions.includes(newPositionName)) return
+
+    const updatedPositions = [...positions, newPositionName]
+    setPositions(updatedPositions)
+    
+    if (supabase) {
+      await supabase.from('positions').insert({ name: newPositionName })
+    }
+
+    setNewPositionName('')
+    setIsAddingPosition(false)
   }
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, callback: (base64: string) => void) => {
@@ -88,7 +175,7 @@ export default function App() {
     }
   }
 
-  const handleAddGame = (e: React.FormEvent) => {
+  const handleAddGame = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!newGame.opponent || !newGame.date) return
 
@@ -105,24 +192,55 @@ export default function App() {
     }
 
     setGames([...games, game])
+
+    if (supabase) {
+      await supabase.from('games').insert({
+        id: game.id,
+        opponent: game.opponent,
+        opponent_logo: game.opponentLogo,
+        opponent_logo_bg: game.opponentLogoBg,
+        date: game.date,
+        time: game.time,
+        location: game.location,
+        fee: game.fee
+      })
+    }
+
     setNewGame({ opponent: '', opponentLogo: '', opponentLogoBg: 'dark', date: '', time: '', location: '', fee: 30 })
     setIsAddingGame(false)
   }
 
-  const toggleAthleteInSquad = (gameId: string, athleteId: string) => {
-    setGames(games.map(game => {
-      if (game.id !== gameId) return game
+  const toggleAthleteInSquad = async (gameId: string, athleteId: string) => {
+    const game = games.find(g => g.id === gameId);
+    if (!game) return;
+
+    const isInSquad = game.squad.find(s => s.athleteId === athleteId);
+    
+    setGames(games.map(g => {
+      if (g.id !== gameId) return g
       
-      const isInSquad = game.squad.find(s => s.athleteId === athleteId)
       if (isInSquad) {
-        return { ...game, squad: game.squad.filter(s => s.athleteId !== athleteId) }
+        return { ...g, squad: g.squad.filter(s => s.athleteId !== athleteId) }
       } else {
-        return { ...game, squad: [...game.squad, { athleteId, paid: false }] }
+        return { ...g, squad: [...g.squad, { athleteId, paid: false }] }
       }
     }))
+
+    if (supabase) {
+      if (isInSquad) {
+        await supabase.from('squad_entries').delete().eq('game_id', gameId).eq('athlete_id', athleteId)
+      } else {
+        await supabase.from('squad_entries').insert({ game_id: gameId, athlete_id: athleteId, paid: false })
+      }
+    }
   }
 
-  const togglePaymentStatus = (gameId: string, athleteId: string) => {
+  const togglePaymentStatus = async (gameId: string, athleteId: string) => {
+    const game = games.find(g => g.id === gameId);
+    if (!game) return;
+    const entry = game.squad.find(s => s.athleteId === athleteId);
+    if (!entry) return;
+
     setGames(games.map(game => {
       if (game.id !== gameId) return game
       return {
@@ -130,6 +248,10 @@ export default function App() {
         squad: game.squad.map(s => s.athleteId === athleteId ? { ...s, paid: !s.paid } : s)
       }
     }))
+
+    if (supabase) {
+      await supabase.from('squad_entries').update({ paid: !entry.paid }).eq('game_id', gameId).eq('athlete_id', athleteId)
+    }
   }
 
   const generateWhatsAppText = (gameId: string) => {
@@ -183,15 +305,21 @@ export default function App() {
     window.open(`https://wa.me/${phone}?text=${encodedText}`, '_blank')
   }
 
-  const deleteAthlete = (id: string) => {
+  const deleteAthlete = async (id: string) => {
     if (confirm('Tem certeza que deseja remover este atleta?')) {
       setAthletes(athletes.filter(a => a.id !== id))
+      if (supabase) {
+        await supabase.from('athletes').delete().eq('id', id)
+      }
     }
   }
 
-  const deleteGame = (id: string) => {
+  const deleteGame = async (id: string) => {
     if (confirm('Tem certeza que deseja remover este jogo?')) {
       setGames(games.filter(g => g.id !== id))
+      if (supabase) {
+        await supabase.from('games').delete().eq('id', id)
+      }
     }
   }
 
@@ -398,7 +526,7 @@ export default function App() {
               <div className="card" style={{ flex: 1 }}>
                 <h3 style={{ marginBottom: '20px' }}>Distribuição de Posições</h3>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                  {['Goleiro', 'Zagueiro', 'Lateral', 'Meio-campo', 'Atacante'].map(pos => {
+                  {positions.map(pos => {
                     const count = athletes.filter(a => a.position === pos).length;
                     const percentage = athletes.length > 0 ? (count / athletes.length) * 100 : 0;
                     
@@ -572,16 +700,23 @@ export default function App() {
                   />
                 </div>
                 <div>
-                  <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.875rem' }}>Posição</label>
+                  <label style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px', fontSize: '0.875rem' }}>
+                    Posição
+                    <button 
+                      type="button" 
+                      onClick={() => setIsAddingPosition(true)}
+                      style={{ fontSize: '0.7rem', color: 'var(--primary)', background: 'transparent', padding: '2px 4px', border: '1px solid var(--primary)', borderRadius: '4px' }}
+                    >
+                      + Nova
+                    </button>
+                  </label>
                   <select 
                     value={newAthlete.position}
                     onChange={e => setNewAthlete({...newAthlete, position: e.target.value as PlayerPosition})}
                   >
-                    <option value="Goleiro">Goleiro</option>
-                    <option value="Zagueiro">Zagueiro</option>
-                    <option value="Lateral">Lateral</option>
-                    <option value="Meio-campo">Meio-campo</option>
-                    <option value="Atacante">Atacante</option>
+                    {positions.map(pos => (
+                      <option key={pos} value={pos}>{pos}</option>
+                    ))}
                   </select>
                 </div>
                 <div>
@@ -605,6 +740,41 @@ export default function App() {
                   </button>
                   <button type="submit" className="btn-primary" style={{ flex: 1 }}>
                     Salvar
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {/* Modal Nova Posição */}
+        {isAddingPosition && (
+          <div className="modal-overlay" style={{ zIndex: 1100 }}>
+            <div className="modal-content card" style={{ width: '100%', maxWidth: '300px' }}>
+              <h2>Nova Posição</h2>
+              <form onSubmit={handleAddPosition} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                <div>
+                  <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.875rem' }}>Nome da Posição</label>
+                  <input 
+                    type="text" 
+                    value={newPositionName}
+                    onChange={e => setNewPositionName(e.target.value)}
+                    placeholder="Ex: Volante"
+                    autoFocus
+                    required
+                  />
+                </div>
+                <div className="flex gap-2" style={{ marginTop: '8px' }}>
+                  <button 
+                    type="button" 
+                    className="btn-secondary" 
+                    style={{ flex: 1 }}
+                    onClick={() => setIsAddingPosition(false)}
+                  >
+                    Cancelar
+                  </button>
+                  <button type="submit" className="btn-primary" style={{ flex: 1 }}>
+                    Adicionar
                   </button>
                 </div>
               </form>

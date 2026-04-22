@@ -1,4 +1,6 @@
-export type PlayerPosition = 'Goleiro' | 'Zagueiro' | 'Lateral' | 'Meio-campo' | 'Atacante';
+export type PlayerPosition = string;
+export const DEFAULT_POSITIONS = ['Goleiro', 'Zagueiro', 'Lateral', 'Meio-campo', 'Atacante'] as const;
+
 
 export interface Athlete {
   id: string;
