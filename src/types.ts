@@ -19,6 +19,9 @@ export interface Game {
   location: string;
   fee: number;
   squad: SquadEntry[];
+  scoreHome?: number;
+  scoreAway?: number;
+  matchReport?: string;
 }
 
 export interface SquadEntry {

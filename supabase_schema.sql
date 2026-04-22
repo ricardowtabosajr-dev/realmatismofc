@@ -29,6 +29,9 @@ CREATE TABLE IF NOT EXISTS public.games (
     time TEXT,
     location TEXT,
     fee NUMERIC DEFAULT 0,
+    score_home INTEGER,
+    score_away INTEGER,
+    match_report TEXT,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 

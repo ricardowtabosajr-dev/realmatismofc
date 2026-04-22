@@ -9,6 +9,7 @@ import './index.css'
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<'athletes' | 'games' | 'dashboard' | 'agenda' | 'marketing'>('dashboard')
+  const [modalTab, setModalTab] = useState<'squad' | 'summary'>('squad')
   const [selectedGameId, setSelectedGameId] = useState<string | null>(null)
   const [previewGameId, setPreviewGameId] = useState<string | null>(null)
   
@@ -122,6 +123,9 @@ export default function App() {
           time: g.time,
           location: g.location,
           fee: g.fee,
+          scoreHome: g.score_home,
+          scoreAway: g.score_away,
+          matchReport: g.match_report,
           squad: g.squad.map((s: any) => ({ athleteId: s.athlete_id, paid: s.paid }))
         })));
       }
@@ -233,7 +237,10 @@ export default function App() {
       time: newGame.time || '',
       location: newGame.location || '',
       fee: newGame.fee || 30,
-      squad: newGame.squad || []
+      squad: newGame.squad || [],
+      scoreHome: newGame.scoreHome,
+      scoreAway: newGame.scoreAway,
+      matchReport: newGame.matchReport
     }
 
     if (newGame.id) {
@@ -251,12 +258,26 @@ export default function App() {
         date: game.date,
         time: game.time,
         location: game.location,
-        fee: game.fee
+        fee: game.fee,
+        score_home: game.scoreHome,
+        score_away: game.scoreAway,
+        match_report: game.matchReport
       })
     }
 
     setNewGame({ opponent: '', opponentLogo: '', opponentLogoBg: 'dark', date: '', time: '', location: '', fee: 30 })
     setIsAddingGame(false)
+  }
+
+  const handleUpdateGameSummary = async (gameId: string, scoreHome: number, scoreAway: number, matchReport: string) => {
+    setGames(games.map(g => g.id === gameId ? { ...g, scoreHome, scoreAway, matchReport } : g));
+    if (supabase) {
+      await supabase.from('games').update({
+        score_home: scoreHome,
+        score_away: scoreAway,
+        match_report: matchReport
+      }).eq('id', gameId);
+    }
   }
 
   const toggleAthleteInSquad = async (gameId: string, athleteId: string) => {
@@ -1039,101 +1060,162 @@ export default function App() {
 
         {/* Modal Convocação */}
         {selectedGameId && (
-          <div className="modal-overlay">
-            <div className="modal-content card" style={{ width: '100%', maxWidth: '600px', maxHeight: '90vh', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-              <div className="flex flex-mobile-column justify-between items-center gap-4" style={{ marginBottom: '20px' }}>
-                <div className="flex items-center gap-3">
-                  <h2 style={{ margin: 0 }}>Convocação: {games.find(g => g.id === selectedGameId)?.opponent}</h2>
-                  <button 
-                    onClick={() => generateWhatsAppText(selectedGameId)}
-                    className="btn-primary flex items-center gap-2"
-                    style={{ padding: '6px 12px', fontSize: '0.875rem' }}
-                  >
-                    <Share2 size={16} />
-                    WhatsApp
-                  </button>
-                </div>
-                <button onClick={() => setSelectedGameId(null)} className="btn-secondary" style={{ padding: '8px 12px' }}>Fechar</button>
-              </div>
+          (() => {
+            const game = games.find(g => g.id === selectedGameId)!;
+            return (
+              <div className="modal-overlay">
+                <div className="modal-content card" style={{ width: '100%', maxWidth: '600px', maxHeight: '90vh', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+                  <div className="flex flex-mobile-column justify-between items-center gap-4" style={{ marginBottom: '20px' }}>
+                    <div className="flex items-center gap-3">
+                      <h2 style={{ margin: 0 }}>Detalhes do Jogo</h2>
+                      <div className="flex gap-2">
+                        <button 
+                          onClick={() => setModalTab('squad')}
+                          className={`btn-secondary ${modalTab === 'squad' ? 'active' : ''}`}
+                          style={{ padding: '6px 12px', fontSize: '0.875rem', backgroundColor: modalTab === 'squad' ? 'var(--primary)' : 'transparent', color: modalTab === 'squad' ? 'white' : 'var(--text-muted)' }}
+                        >
+                          Convocação
+                        </button>
+                        <button 
+                          onClick={() => setModalTab('summary')}
+                          className={`btn-secondary ${modalTab === 'summary' ? 'active' : ''}`}
+                          style={{ padding: '6px 12px', fontSize: '0.875rem', backgroundColor: modalTab === 'summary' ? 'var(--primary)' : 'transparent', color: modalTab === 'summary' ? 'white' : 'var(--text-muted)' }}
+                        >
+                          Súmula
+                        </button>
+                      </div>
+                    </div>
+                    <button onClick={() => setSelectedGameId(null)} className="btn-secondary" style={{ padding: '8px 12px' }}>Fechar</button>
+                  </div>
 
-              <div style={{ overflowY: 'auto', flex: 1, paddingRight: '10px' }}>
-                <h4 style={{ marginBottom: '12px' }}>Selecione os Atletas</h4>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                  {athletes.map(athlete => {
-                    const squadMember = games.find(g => g.id === selectedGameId)?.squad.find(s => s.athleteId === athlete.id);
-                    const isInSquad = !!squadMember;
-                    
-                    return (
-                      <div key={athlete.id} className="flex items-center justify-between p-3" style={{ 
-                        backgroundColor: isInSquad ? 'rgba(46, 204, 113, 0.05)' : 'var(--surface-hover)',
-                        borderRadius: '8px',
-                        border: isInSquad ? '1px solid var(--primary)' : '1px solid transparent'
-                      }}>
-                        <div className="flex items-center gap-3">
-                          <input 
-                            type="checkbox" 
-                            checked={isInSquad}
-                            onChange={() => toggleAthleteInSquad(selectedGameId, athlete.id)}
-                            style={{ width: '20px', height: '20px', cursor: 'pointer' }}
-                          />
-                          <div>
-                            <div style={{ fontWeight: '600' }}>{athlete.name}</div>
-                            <div className="text-muted" style={{ fontSize: '0.75rem' }}>{athlete.position}</div>
+                  <div style={{ overflowY: 'auto', flex: 1, paddingRight: '10px' }}>
+                    {modalTab === 'squad' ? (
+                      <>
+                        <div className="flex justify-between items-center" style={{ marginBottom: '16px' }}>
+                          <h4 style={{ margin: 0 }}>Selecione os Atletas</h4>
+                          <button 
+                            onClick={() => generateWhatsAppText(selectedGameId)}
+                            className="btn-primary flex items-center gap-2"
+                            style={{ padding: '6px 12px', fontSize: '0.875rem' }}
+                          >
+                            <Share2 size={16} />
+                            WhatsApp
+                          </button>
+                        </div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                          {athletes.map(athlete => {
+                            const squadMember = game.squad.find(s => s.athleteId === athlete.id);
+                            const isInSquad = !!squadMember;
+                            
+                            return (
+                              <div key={athlete.id} className="flex items-center justify-between p-3" style={{ 
+                                backgroundColor: isInSquad ? 'rgba(46, 204, 113, 0.05)' : 'var(--surface-hover)',
+                                borderRadius: '8px',
+                                border: isInSquad ? '1px solid var(--primary)' : '1px solid transparent'
+                              }}>
+                                <div className="flex items-center gap-3">
+                                  <input 
+                                    type="checkbox" 
+                                    checked={isInSquad}
+                                    onChange={() => toggleAthleteInSquad(selectedGameId, athlete.id)}
+                                    style={{ width: '20px', height: '20px', cursor: 'pointer' }}
+                                  />
+                                  <div>
+                                    <div style={{ fontWeight: '600' }}>{athlete.name}</div>
+                                    <div className="text-muted" style={{ fontSize: '0.75rem' }}>{athlete.position}</div>
+                                  </div>
+                                </div>
+
+                                {isInSquad && (
+                                  <div className="flex items-center gap-2">
+                                     <button 
+                                      onClick={() => shareIndividualPix(athlete, game)}
+                                      className="btn-secondary"
+                                      style={{ padding: '6px', backgroundColor: 'rgba(37, 211, 102, 0.1)', color: '#25D366' }}
+                                      title="Enviar PIX por WhatsApp"
+                                    >
+                                      <DollarSign size={16} />
+                                    </button>
+                                    <button 
+                                      className={`badge ${squadMember?.paid ? '' : 'pending'}`}
+                                      onClick={() => togglePaymentStatus(selectedGameId, athlete.id)}
+                                      style={{ 
+                                        cursor: 'pointer',
+                                        backgroundColor: squadMember?.paid ? 'rgba(34, 197, 94, 0.1)' : 'rgba(239, 68, 68, 0.1)',
+                                        color: squadMember?.paid ? 'var(--success)' : 'var(--danger)',
+                                        border: 'none'
+                                      }}
+                                    >
+                                      {squadMember?.paid ? 'Pago' : 'Pendente'}
+                                    </button>
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </>
+                    ) : (
+                      <div className="flex flex-col gap-6">
+                        <div className="card" style={{ backgroundColor: 'rgba(255,255,255,0.02)' }}>
+                          <h4 style={{ marginBottom: '16px' }}>Resultado da Partida</h4>
+                          <div className="flex items-center justify-center gap-8" style={{ padding: '20px' }}>
+                            <div style={{ textAlign: 'center' }}>
+                              <div style={{ fontWeight: 'bold', marginBottom: '8px' }}>{teamConfig.name}</div>
+                              <input 
+                                type="number" 
+                                value={game.scoreHome || 0} 
+                                onChange={(e) => handleUpdateGameSummary(selectedGameId, parseInt(e.target.value) || 0, game.scoreAway || 0, game.matchReport || '')}
+                                style={{ width: '60px', height: '60px', fontSize: '24px', textAlign: 'center', backgroundColor: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '8px' }}
+                              />
+                            </div>
+                            <div style={{ fontSize: '24px', fontWeight: 'bold', marginTop: '20px' }}>X</div>
+                            <div style={{ textAlign: 'center' }}>
+                              <div style={{ fontWeight: 'bold', marginBottom: '8px' }}>{game.opponent}</div>
+                              <input 
+                                type="number" 
+                                value={game.scoreAway || 0} 
+                                onChange={(e) => handleUpdateGameSummary(selectedGameId, game.scoreHome || 0, parseInt(e.target.value) || 0, game.matchReport || '')}
+                                style={{ width: '60px', height: '60px', fontSize: '24px', textAlign: 'center', backgroundColor: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '8px' }}
+                              />
+                            </div>
                           </div>
                         </div>
 
-                        {isInSquad && (
-                          <div className="flex items-center gap-2">
-                             <button 
-                              onClick={() => shareIndividualPix(athlete, games.find(g => g.id === selectedGameId)!)}
-                              className="btn-secondary"
-                              style={{ padding: '6px', backgroundColor: 'rgba(37, 211, 102, 0.1)', color: '#25D366' }}
-                              title="Enviar PIX por WhatsApp"
-                            >
-                              <DollarSign size={16} />
-                            </button>
-                            <button 
-                              className={`badge ${squadMember?.paid ? '' : 'pending'}`}
-                              onClick={() => togglePaymentStatus(selectedGameId, athlete.id)}
-                              style={{ 
-                                cursor: 'pointer',
-                                backgroundColor: squadMember?.paid ? 'rgba(34, 197, 94, 0.1)' : 'rgba(239, 68, 68, 0.1)',
-                                color: squadMember?.paid ? 'var(--success)' : 'var(--danger)',
-                                border: 'none'
-                              }}
-                            >
-                              {squadMember?.paid ? 'Pago' : 'Pendente'}
-                            </button>
-                          </div>
-                        )}
+                        <div className="card" style={{ backgroundColor: 'rgba(255,255,255,0.02)' }}>
+                          <h4 style={{ marginBottom: '12px' }}>Súmula do Jogo</h4>
+                          <p className="text-muted" style={{ fontSize: '0.875rem', marginBottom: '12px' }}>Registre quem fez os gols, cartões e outras informações importantes.</p>
+                          <textarea 
+                            value={game.matchReport || ''} 
+                            onChange={(e) => handleUpdateGameSummary(selectedGameId, game.scoreHome || 0, game.scoreAway || 0, e.target.value)}
+                            placeholder="Ex: Gols: Emerson (2), Diego (1). Cartão Amarelo: Alex."
+                            style={{ width: '100%', minHeight: '150px', padding: '12px', backgroundColor: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '8px', color: 'var(--text)', resize: 'vertical' }}
+                          />
+                        </div>
                       </div>
-                    );
-                  })}
-                </div>
-              </div>
+                    )}
+                  </div>
 
-              <div style={{ marginTop: '20px', paddingTop: '20px', borderTop: '1px solid var(--border)' }}>
-                <div className="flex justify-between items-center">
-                  <div>
-                    <div className="text-muted">Total Confirmados</div>
-                    <div style={{ fontSize: '1.25rem', fontWeight: 'bold' }}>{games.find(g => g.id === selectedGameId)?.squad.length} Atletas</div>
-                  </div>
-                  <div style={{ textAlign: 'right' }}>
-                    <div className="text-muted">Arrecadado</div>
-                    <div style={{ fontSize: '1.25rem', fontWeight: 'bold', color: 'var(--primary)' }}>
-                      R$ {
-                        (games.find(g => g.id === selectedGameId)?.squad.filter(s => s.paid).length || 0) * 
-                        (games.find(g => g.id === selectedGameId)?.fee || 0)
-                      } / R$ {
-                        (games.find(g => g.id === selectedGameId)?.squad.length || 0) * 
-                        (games.find(g => g.id === selectedGameId)?.fee || 0)
-                      }
+                  {modalTab === 'squad' && (
+                    <div style={{ marginTop: '20px', paddingTop: '20px', borderTop: '1px solid var(--border)' }}>
+                      <div className="flex justify-between items-center">
+                        <div>
+                          <div className="text-muted">Total Confirmados</div>
+                          <div style={{ fontSize: '1.25rem', fontWeight: 'bold' }}>{game.squad.length} Atletas</div>
+                        </div>
+                        <div style={{ textAlign: 'right' }}>
+                          <div className="text-muted">Arrecadado</div>
+                          <div style={{ fontSize: '1.25rem', fontWeight: 'bold', color: 'var(--primary)' }}>
+                            R$ {(game.squad.filter(s => s.paid).length || 0) * (game.fee || 0)} / R$ {(game.squad.length || 0) * (game.fee || 0)}
+                          </div>
+                        </div>
+                      </div>
                     </div>
-                  </div>
+                  )}
                 </div>
               </div>
-            </div>
-          </div>
+            )
+          })()
         )}
         {activeTab === 'agenda' && (
           <div>
