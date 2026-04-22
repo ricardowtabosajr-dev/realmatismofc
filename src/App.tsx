@@ -93,7 +93,14 @@ export default function App() {
       const { data: gamesData } = await supabase.from('games').select('*, squad:squad_entries(*)');
       if (gamesData) {
         setGames(gamesData.map(g => ({
-          ...g,
+          id: g.id,
+          opponent: g.opponent,
+          opponentLogo: g.opponent_logo,
+          opponentLogoBg: g.opponent_logo_bg,
+          date: g.date,
+          time: g.time,
+          location: g.location,
+          fee: g.fee,
           squad: g.squad.map((s: any) => ({ athleteId: s.athlete_id, paid: s.paid }))
         })));
       }
@@ -1141,8 +1148,16 @@ export default function App() {
                                 {new Date(game.date + 'T12:00:00').toLocaleString('pt-BR', { month: 'short' })}
                               </div>
                             </div>
-                            <div>
-                              <div style={{ fontWeight: 'bold', fontSize: '1.1rem' }}>{teamConfig.name} vs {game.opponent}</div>
+                            <div className="flex items-center gap-3">
+                              <div style={{ width: '40px', height: '40px', borderRadius: '8px', backgroundColor: 'rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
+                                {game.opponentLogo ? (
+                                  <img src={game.opponentLogo} style={{ width: '100%', height: '100%', objectFit: 'contain', mixBlendMode: getBlendMode(game.opponentLogoBg) }} />
+                                ) : (
+                                  <Trophy size={20} opacity={0.3} />
+                                )}
+                              </div>
+                              <div>
+                                <div style={{ fontWeight: 'bold', fontSize: '1.1rem' }}>{teamConfig.name} vs {game.opponent}</div>
                               <div className="flex gap-3 text-muted" style={{ fontSize: '0.875rem', marginTop: '4px' }}>
                                 <span className="flex items-center gap-1"><Clock size={14}/> {game.time}h</span>
                                 <span className="flex items-center gap-1"><MapPin size={14}/> {game.location}</span>
@@ -1174,8 +1189,17 @@ export default function App() {
                             <div style={{ textAlign: 'center', minWidth: '60px' }}>
                               <div style={{ fontWeight: 'bold' }}>{game.date.split('-')[2]}/{game.date.split('-')[1]}</div>
                             </div>
-                            <div>
-                              <div style={{ fontWeight: '600' }}>{teamConfig.name} vs {game.opponent}</div>
+                            <div className="flex items-center gap-3">
+                              <div style={{ width: '32px', height: '32px', borderRadius: '4px', backgroundColor: 'rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', opacity: 0.5 }}>
+                                {game.opponentLogo ? (
+                                  <img src={game.opponentLogo} style={{ width: '100%', height: '100%', objectFit: 'contain', mixBlendMode: getBlendMode(game.opponentLogoBg) }} />
+                                ) : (
+                                  <Trophy size={16} opacity={0.3} />
+                                )}
+                              </div>
+                              <div>
+                                <div style={{ fontWeight: '600' }}>{teamConfig.name} vs {game.opponent}</div>
+                              </div>
                             </div>
                           </div>
                           <div style={{ color: 'var(--primary)', fontWeight: 'bold' }}>
@@ -1220,8 +1244,12 @@ export default function App() {
                           backgroundColor: previewGameId === game.id ? 'rgba(46, 204, 113, 0.05)' : 'var(--surface)'
                         }}
                       >
-                        <div style={{ width: '40px', height: '40px', borderRadius: '8px', backgroundColor: 'rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                          <Trophy size={20} opacity={0.3} />
+                        <div style={{ width: '40px', height: '40px', borderRadius: '8px', backgroundColor: 'rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
+                          {game.opponentLogo ? (
+                            <img src={game.opponentLogo} style={{ width: '100%', height: '100%', objectFit: 'contain', mixBlendMode: getBlendMode(game.opponentLogoBg) }} />
+                          ) : (
+                            <Trophy size={20} opacity={0.3} />
+                          )}
                         </div>
                         <div>
                           <div style={{ fontWeight: '600' }}>vs {game.opponent}</div>
