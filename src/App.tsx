@@ -3,6 +3,8 @@ import { Plus, Users, Trophy, LayoutDashboard, Trash2, Edit2, Phone, Calendar, C
 import type { Athlete, Game, PlayerPosition, TeamConfig } from './types'
 import { DEFAULT_POSITIONS } from './types'
 import { supabase } from './lib/supabase'
+import { toPng } from 'html-to-image'
+import { useRef } from 'react'
 import './index.css'
 
 export default function App() {
@@ -32,6 +34,7 @@ export default function App() {
 
   const [isAddingPosition, setIsAddingPosition] = useState(false)
   const [newPositionName, setNewPositionName] = useState('')
+  const artRef = useRef<HTMLDivElement>(null)
 
   const [isAddingAthlete, setIsAddingAthlete] = useState(false)
   const [isAddingGame, setIsAddingGame] = useState(false)
@@ -292,6 +295,42 @@ export default function App() {
 
     const encodedText = encodeURIComponent(text)
     window.open(`https://wa.me/?text=${encodedText}`, '_blank')
+  }
+
+  const handleDownloadArt = async () => {
+    if (artRef.current === null) return
+    
+    try {
+      const dataUrl = await toPng(artRef.current, { cacheBust: true, pixelRatio: 2 })
+      
+      // Check if it's a mobile device and navigator.share is available
+      if (navigator.share && navigator.canShare) {
+        const response = await fetch(dataUrl);
+        const blob = await response.blob();
+        const file = new File([blob], `jogo-${new Date().getTime()}.png`, { type: 'image/png' });
+        
+        if (navigator.canShare({ files: [file] })) {
+          await navigator.share({
+            files: [file],
+            title: 'Divulgação do Jogo',
+            text: `Confira o nosso próximo jogo! ⚽🔥`
+          });
+          return;
+        }
+      }
+
+      // Fallback to download
+      const link = document.createElement('a')
+      link.download = `jogo-${new Date().getTime()}.png`
+      link.href = dataUrl
+      link.click()
+    } catch (err) {
+      console.error('Error generating image:', err)
+      // Only show alert if it's not a user-cancelled share
+      if (err instanceof Error && err.name !== 'AbortError') {
+        alert('Erro ao gerar imagem. Tente novamente.')
+      }
+    }
   }
 
   const shareIndividualPix = (athlete: Athlete, game: Game) => {
@@ -1119,70 +1158,76 @@ export default function App() {
         )}
         {activeTab === 'marketing' && (
           <div>
-            <div style={{ marginBottom: '32px' }}>
-              <h1>Gerador de Arte</h1>
-              <p className="text-muted">Crie artes profissionais para divulgar seus jogos.</p>
+            <div className="flex flex-mobile-column justify-between items-center gap-4" style={{ marginBottom: '32px' }}>
+              <div>
+                <h1 style={{ marginBottom: '4px' }}>Gerador de Arte</h1>
+                <p className="text-muted">Crie artes incríveis para divulgar as partidas.</p>
+              </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-              <div className="card" style={{ padding: '24px' }}>
-                <h3 style={{ marginBottom: '20px' }}>1. Selecione o Jogo</h3>
+            <div className="flex flex-mobile-column gap-8">
+              <div style={{ flex: 1, minWidth: '300px' }}>
+                <h3 style={{ marginBottom: '16px' }}>1. Selecione o Jogo</h3>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                   {games.length === 0 ? (
                     <p className="text-muted">Nenhum jogo agendado.</p>
                   ) : (
-                    games
-                      .filter(g => new Date(g.date) >= new Date(new Date().setHours(0,0,0,0)))
-                      .map(game => (
-                        <button 
-                          key={game.id}
-                          className={`card flex items-center gap-3 w-full text-left transition-all ${previewGameId === game.id ? 'active' : ''}`}
-                          style={{ 
-                            padding: '12px', 
-                            cursor: 'pointer',
-                            border: previewGameId === game.id ? '2px solid var(--primary)' : '1px solid var(--border)',
-                            backgroundColor: previewGameId === game.id ? 'rgba(46, 204, 113, 0.1)' : 'transparent'
-                          }}
-                          onClick={() => setPreviewGameId(game.id)}
-                        >
-                          <div style={{ width: '40px', height: '40px', borderRadius: '4px', overflow: 'hidden', backgroundColor: 'rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                            {game.opponentLogo ? <img src={game.opponentLogo} style={{ width: '100%', height: '100%', objectFit: 'contain', mixBlendMode: getBlendMode(game.opponentLogoBg) }} /> : <Trophy size={16} />}
-                          </div>
-                          <div>
-                            <div style={{ fontWeight: '600', fontSize: '0.9rem' }}>vs {game.opponent}</div>
-                            <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{formatDate(game.date)}</div>
-                          </div>
-                        </button>
-                      ))
+                    games.map(game => (
+                      <button
+                        key={game.id}
+                        onClick={() => setPreviewGameId(game.id)}
+                        className={`card flex items-center gap-4`}
+                        style={{ 
+                          width: '100%', 
+                          textAlign: 'left',
+                          padding: '16px',
+                          cursor: 'pointer',
+                          transition: 'all 0.2s ease',
+                          border: previewGameId === game.id ? '2px solid var(--primary)' : '1px solid var(--border)',
+                          backgroundColor: previewGameId === game.id ? 'rgba(46, 204, 113, 0.05)' : 'var(--surface)'
+                        }}
+                      >
+                        <div style={{ width: '40px', height: '40px', borderRadius: '8px', backgroundColor: 'rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                          <Trophy size={20} opacity={0.3} />
+                        </div>
+                        <div>
+                          <div style={{ fontWeight: '600' }}>vs {game.opponent}</div>
+                          <div className="text-muted" style={{ fontSize: '0.75rem' }}>{formatDate(game.date)}</div>
+                        </div>
+                      </button>
+                    ))
                   )}
                 </div>
               </div>
 
-              <div>
-                <h3 style={{ marginBottom: '20px' }}>2. Pré-visualização (Social)</h3>
+              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                <h3 style={{ marginBottom: '16px', width: '100%' }}>2. Pré-visualização (Social)</h3>
                 {previewGameId ? (
                   (() => {
                     const game = games.find(g => g.id === previewGameId)
                     if (!game) return null
+                    
                     return (
-                      <div className="flex flex-column items-center gap-4">
-                        {/* THE POSTER - REALISTIC MATCH DAY */}
-                        <div id="match-poster" style={{ 
-                          width: '100%', 
-                          aspectRatio: '9/16', 
-                          maxWidth: '400px',
-                          backgroundImage: 'url("https://images.unsplash.com/photo-1529900748604-07564a03e7a6?auto=format&fit=crop&w=800&q=90")',
-                          backgroundSize: 'cover',
-                          backgroundPosition: 'center 40%',
-                          borderRadius: '16px',
-                          position: 'relative',
-                          overflow: 'hidden',
-                          display: 'flex',
-                          flexDirection: 'column',
-                          alignItems: 'center',
-                          boxShadow: '0 30px 60px rgba(0,0,0,0.8)',
-                          fontFamily: "'Outfit', sans-serif"
-                        }}>
+                      <div style={{ width: '100%', maxWidth: '380px' }}>
+                        {/* THE ART CONTAINER */}
+                        <div 
+                          ref={artRef}
+                          style={{ 
+                            width: '100%', 
+                            aspectRatio: '9/16', 
+                            position: 'relative',
+                            backgroundColor: '#000',
+                            backgroundImage: 'url("https://images.unsplash.com/photo-1529900748604-07564a03e7a6?auto=format&fit=crop&w=800&q=90")',
+                            backgroundSize: 'cover',
+                            backgroundPosition: 'center',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            overflow: 'hidden',
+                            boxShadow: '0 20px 40px rgba(0,0,0,0.8)',
+                            borderRadius: '16px',
+                            fontFamily: "'Outfit', sans-serif"
+                          }}
+                        >
                           {/* Dark overlay for readability */}
                           <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', background: 'linear-gradient(180deg, rgba(0,0,0,0.55) 0%, rgba(0,20,0,0.4) 30%, rgba(0,40,0,0.35) 50%, rgba(0,0,0,0.7) 75%, rgba(0,0,0,0.95) 100%)', pointerEvents: 'none' }}></div>
 
@@ -1402,8 +1447,30 @@ export default function App() {
                         </div>
 
                         
-                        <p className="text-muted text-center" style={{ fontSize: '0.875rem' }}>
-                          Dica: Use <b>Windows + Shift + S</b> para tirar print da arte e postar!
+                        <div className="flex flex-mobile-column gap-3" style={{ marginTop: '24px', width: '100%' }}>
+                          <button 
+                            onClick={handleDownloadArt}
+                            className="btn-primary flex items-center justify-center gap-2"
+                            style={{ flex: 1, padding: '14px' }}
+                          >
+                            <Plus size={20} />
+                            Baixar para Postar
+                          </button>
+                          <button 
+                            onClick={() => {
+                              const text = encodeURIComponent(`Fala galera! Olha o convite para o nosso próximo jogo vs ${game.opponent}! ⚽🔥`);
+                              window.open(`https://wa.me/?text=${text}`, '_blank');
+                            }}
+                            className="btn-secondary flex items-center justify-center gap-2"
+                            style={{ flex: 1, padding: '14px', backgroundColor: '#25D366', color: 'white' }}
+                          >
+                            <Share2 size={20} />
+                            Enviar Texto
+                          </button>
+                        </div>
+                        
+                        <p className="text-muted text-center" style={{ fontSize: '0.75rem', marginTop: '16px' }}>
+                          <b>Instruções:</b> Clique em "Baixar" e depois compartilhe a imagem no WhatsApp ou Instagram!
                         </p>
                       </div>
                     )
