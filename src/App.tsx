@@ -624,9 +624,18 @@ export default function App() {
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                     {games.slice(-3).reverse().map(game => (
                       <div key={game.id} className="flex justify-between items-center p-3" style={{ backgroundColor: 'var(--surface-hover)', borderRadius: '8px' }}>
-                        <div>
-                          <div style={{ fontWeight: '600' }}>vs {game.opponent}</div>
-                          <div className="text-muted" style={{ fontSize: '0.75rem' }}>{formatDate(game.date)}</div>
+                        <div className="flex items-center gap-3">
+                          <div style={{ width: '32px', height: '32px', borderRadius: '4px', backgroundColor: 'rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', flexShrink: 0 }}>
+                            {game.opponentLogo ? (
+                              <img src={game.opponentLogo} style={{ width: '100%', height: '100%', objectFit: 'contain', mixBlendMode: getBlendMode(game.opponentLogoBg) }} />
+                            ) : (
+                              <Trophy size={16} opacity={0.3} />
+                            )}
+                          </div>
+                          <div>
+                            <div style={{ fontWeight: '600' }}>{teamConfig.name} vs {game.opponent}</div>
+                            <div className="text-muted" style={{ fontSize: '0.75rem' }}>{formatDate(game.date)}</div>
+                          </div>
                         </div>
                         <div style={{ textAlign: 'right' }}>
                           <div style={{ color: 'var(--primary)', fontWeight: '600' }}>
