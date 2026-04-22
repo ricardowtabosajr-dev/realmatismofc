@@ -14,7 +14,17 @@ export default function App() {
   
   const [teamConfig, setTeamConfig] = useState<TeamConfig>(() => {
     const saved = localStorage.getItem('teamConfig')
-    return saved ? JSON.parse(saved) : { name: 'RealMatismo', pixKey: '' }
+    if (!saved) return { name: 'RealMatismo', pixKey: '' }
+    try {
+      const parsed = JSON.parse(saved)
+      return {
+        ...parsed,
+        logoUrl: parsed.logoUrl || parsed.logo_url,
+        logoBgType: parsed.logoBgType || parsed.logo_bg_type
+      }
+    } catch (e) {
+      return { name: 'RealMatismo', pixKey: '' }
+    }
   })
 
   const [athletes, setAthletes] = useState<Athlete[]>(() => {
@@ -24,7 +34,18 @@ export default function App() {
   
   const [games, setGames] = useState<Game[]>(() => {
     const saved = localStorage.getItem('games')
-    return saved ? JSON.parse(saved) : []
+    if (!saved) return []
+    try {
+      const parsed = JSON.parse(saved)
+      return parsed.map((g: any) => ({
+        ...g,
+        opponentLogo: g.opponentLogo || g.opponent_logo,
+        opponentLogoBg: g.opponentLogoBg || g.opponent_logo_bg,
+        squad: g.squad || []
+      }))
+    } catch (e) {
+      return []
+    }
   })
 
   const [positions, setPositions] = useState<string[]>(() => {
