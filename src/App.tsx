@@ -187,12 +187,17 @@ export default function App() {
     }
   }
 
+  const handleEditGame = (game: Game) => {
+    setNewGame(game)
+    setIsAddingGame(true)
+  }
+
   const handleAddGame = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!newGame.opponent || !newGame.date) return
 
     const game: Game = {
-      id: crypto.randomUUID(),
+      id: newGame.id || crypto.randomUUID(),
       opponent: newGame.opponent,
       opponentLogo: newGame.opponentLogo || '',
       opponentLogoBg: newGame.opponentLogoBg || 'dark',
@@ -200,13 +205,17 @@ export default function App() {
       time: newGame.time || '',
       location: newGame.location || '',
       fee: newGame.fee || 30,
-      squad: []
+      squad: newGame.squad || []
     }
 
-    setGames([...games, game])
+    if (newGame.id) {
+      setGames(games.map(g => g.id === newGame.id ? game : g))
+    } else {
+      setGames([...games, game])
+    }
 
     if (supabase) {
-      await supabase.from('games').insert({
+      await supabase.from('games').upsert({
         id: game.id,
         opponent: game.opponent,
         opponent_logo: game.opponentLogo,
@@ -297,39 +306,49 @@ export default function App() {
     window.open(`https://wa.me/?text=${encodedText}`, '_blank')
   }
 
+  const handleShareArt = async () => {
+    if (artRef.current === null) return
+    
+    try {
+      const dataUrl = await toPng(artRef.current, { cacheBust: true, pixelRatio: 2 })
+      const response = await fetch(dataUrl);
+      const blob = await response.blob();
+      const file = new File([blob], `jogo-${new Date().getTime()}.png`, { type: 'image/png' });
+
+      if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+        await navigator.share({
+          files: [file],
+          title: 'Divulgação do Jogo',
+          text: `Confira o nosso próximo jogo! ⚽🔥`
+        });
+      } else {
+        // Fallback for desktop or unsupported browsers
+        const link = document.createElement('a')
+        link.download = `jogo-${new Date().getTime()}.png`
+        link.href = dataUrl
+        link.click()
+        alert('Imagem baixada! Agora você pode compartilhar manualmente no WhatsApp.')
+      }
+    } catch (err) {
+      console.error('Error sharing image:', err)
+      if (err instanceof Error && err.name !== 'AbortError') {
+        alert('Erro ao processar imagem. Tente novamente.')
+      }
+    }
+  }
+
   const handleDownloadArt = async () => {
     if (artRef.current === null) return
     
     try {
       const dataUrl = await toPng(artRef.current, { cacheBust: true, pixelRatio: 2 })
-      
-      // Check if it's a mobile device and navigator.share is available
-      if (navigator.share && navigator.canShare) {
-        const response = await fetch(dataUrl);
-        const blob = await response.blob();
-        const file = new File([blob], `jogo-${new Date().getTime()}.png`, { type: 'image/png' });
-        
-        if (navigator.canShare({ files: [file] })) {
-          await navigator.share({
-            files: [file],
-            title: 'Divulgação do Jogo',
-            text: `Confira o nosso próximo jogo! ⚽🔥`
-          });
-          return;
-        }
-      }
-
-      // Fallback to download
       const link = document.createElement('a')
       link.download = `jogo-${new Date().getTime()}.png`
       link.href = dataUrl
       link.click()
     } catch (err) {
-      console.error('Error generating image:', err)
-      // Only show alert if it's not a user-cancelled share
-      if (err instanceof Error && err.name !== 'AbortError') {
-        alert('Erro ao gerar imagem. Tente novamente.')
-      }
+      console.error('Error downloading image:', err)
+      alert('Erro ao baixar imagem. Tente novamente.')
     }
   }
 
@@ -689,7 +708,10 @@ export default function App() {
               </div>
               <button 
                 className="btn-primary flex items-center gap-2"
-                onClick={() => setIsAddingGame(true)}
+                onClick={() => {
+                  setNewGame({ opponent: '', opponentLogo: '', opponentLogoBg: 'dark', date: '', time: '', location: '', fee: 30 });
+                  setIsAddingGame(true);
+                }}
               >
                 <Plus size={20} />
                 Novo Jogo
@@ -752,12 +774,20 @@ export default function App() {
                           </button>
                         </div>
                       </div>
-                      <button 
-                        onClick={() => deleteGame(game.id)}
-                        style={{ color: 'var(--danger)', padding: '8px', background: 'transparent' }}
-                      >
-                        <Trash2 size={18} />
-                      </button>
+                      <div className="flex gap-1">
+                        <button 
+                          onClick={() => handleEditGame(game)}
+                          style={{ color: 'var(--primary)', padding: '8px', background: 'transparent' }}
+                        >
+                          <Edit2 size={18} />
+                        </button>
+                        <button 
+                          onClick={() => deleteGame(game.id)}
+                          style={{ color: 'var(--danger)', padding: '8px', background: 'transparent' }}
+                        >
+                          <Trash2 size={18} />
+                        </button>
+                      </div>
                     </div>
                   </div>
                 ))}
@@ -870,7 +900,7 @@ export default function App() {
           <div className="modal-overlay">
             {/* same content as before */}
             <div className="modal-content card" style={{ width: '100%', maxWidth: '450px' }}>
-              <h2>Novo Jogo</h2>
+              <h2>{newGame.id ? 'Editar Jogo' : 'Novo Jogo'}</h2>
               <form onSubmit={handleAddGame} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                 <div>
                   <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.875rem' }}>Adversário</label>
@@ -962,7 +992,7 @@ export default function App() {
                     Cancelar
                   </button>
                   <button type="submit" className="btn-primary" style={{ flex: 1 }}>
-                    Agendar
+                    {newGame.id ? 'Salvar Alterações' : 'Agendar'}
                   </button>
                 </div>
               </form>
@@ -1077,7 +1107,10 @@ export default function App() {
               </div>
               <button 
                 className="btn-primary flex items-center gap-2"
-                onClick={() => setIsAddingGame(true)}
+                onClick={() => {
+                  setNewGame({ opponent: '', opponentLogo: '', opponentLogoBg: 'dark', date: '', time: '', location: '', fee: 30 });
+                  setIsAddingGame(true);
+                }}
               >
                 <Plus size={20} />
                 Agendar Novo Jogo
@@ -1165,7 +1198,7 @@ export default function App() {
               </div>
             </div>
 
-            <div className="flex flex-mobile-column gap-8">
+            <div className="flex flex-mobile-column gap-8 marketing-grid">
               <div style={{ flex: 1, minWidth: '300px' }}>
                 <h3 style={{ marginBottom: '16px' }}>1. Selecione o Jogo</h3>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
@@ -1176,7 +1209,7 @@ export default function App() {
                       <button
                         key={game.id}
                         onClick={() => setPreviewGameId(game.id)}
-                        className={`card flex items-center gap-4`}
+                        className={`card flex items-center gap-4 marketing-game-card`}
                         style={{ 
                           width: '100%', 
                           textAlign: 'left',
@@ -1208,7 +1241,7 @@ export default function App() {
                     if (!game) return null
                     
                     return (
-                      <div style={{ width: '100%', maxWidth: '380px' }}>
+                      <div style={{ width: '100%', maxWidth: '380px' }} className="art-preview-container">
                         {/* THE ART CONTAINER */}
                         <div 
                           ref={artRef}
@@ -1449,28 +1482,39 @@ export default function App() {
                         
                         <div className="flex flex-mobile-column gap-3" style={{ marginTop: '24px', width: '100%' }}>
                           <button 
-                            onClick={handleDownloadArt}
+                            onClick={handleShareArt}
                             className="btn-primary flex items-center justify-center gap-2"
+                            style={{ flex: 1, padding: '14px', backgroundColor: '#25D366', color: 'white', border: 'none', boxShadow: '0 4px 14px rgba(37, 211, 102, 0.4)' }}
+                          >
+                            <Share2 size={20} />
+                            Compartilhar Arte (WhatsApp)
+                          </button>
+                          <button 
+                            onClick={handleDownloadArt}
+                            className="btn-secondary flex items-center justify-center gap-2"
                             style={{ flex: 1, padding: '14px' }}
                           >
-                            <Plus size={20} />
-                            Baixar para Postar
+                            <Trophy size={20} />
+                            Baixar Imagem
                           </button>
+                        </div>
+                        
+                        <div style={{ marginTop: '12px', width: '100%' }}>
                           <button 
                             onClick={() => {
                               const text = encodeURIComponent(`Fala galera! Olha o convite para o nosso próximo jogo vs ${game.opponent}! ⚽🔥`);
                               window.open(`https://wa.me/?text=${text}`, '_blank');
                             }}
-                            className="btn-secondary flex items-center justify-center gap-2"
-                            style={{ flex: 1, padding: '14px', backgroundColor: '#25D366', color: 'white' }}
+                            className="flex items-center justify-center gap-2"
+                            style={{ width: '100%', padding: '10px', background: 'transparent', color: 'var(--text-muted)', fontSize: '0.875rem', border: '1px solid var(--border)', borderRadius: 'var(--radius)' }}
                           >
-                            <Share2 size={20} />
-                            Enviar Texto
+                            <Phone size={16} />
+                            Enviar apenas texto
                           </button>
                         </div>
                         
                         <p className="text-muted text-center" style={{ fontSize: '0.75rem', marginTop: '16px' }}>
-                          <b>Instruções:</b> Clique em "Baixar" e depois compartilhe a imagem no WhatsApp ou Instagram!
+                          <b>Dica:</b> Use o botão verde acima para compartilhar diretamente no WhatsApp! Se estiver no computador, a imagem será baixada automaticamente.
                         </p>
                       </div>
                     )
