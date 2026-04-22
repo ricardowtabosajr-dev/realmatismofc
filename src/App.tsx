@@ -1179,9 +1179,10 @@ export default function App() {
                               </div>
                               <div>
                                 <div style={{ fontWeight: 'bold', fontSize: '1.1rem' }}>{teamConfig.name} vs {game.opponent}</div>
-                              <div className="flex gap-3 text-muted" style={{ fontSize: '0.875rem', marginTop: '4px' }}>
-                                <span className="flex items-center gap-1"><Clock size={14}/> {game.time}h</span>
-                                <span className="flex items-center gap-1"><MapPin size={14}/> {game.location}</span>
+                                <div className="flex gap-3 text-muted" style={{ fontSize: '0.875rem', marginTop: '4px' }}>
+                                  <span className="flex items-center gap-1"><Clock size={14}/> {game.time}h</span>
+                                  <span className="flex items-center gap-1"><MapPin size={14}/> {game.location}</span>
+                                </div>
                               </div>
                             </div>
                           </div>
