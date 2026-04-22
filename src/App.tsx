@@ -333,9 +333,9 @@ export default function App() {
   }
 
   return (
-    <div className="flex" style={{ minHeight: '100vh' }}>
-      {/* Sidebar */}
-      <aside style={{ 
+    <div className="flex flex-mobile-column" style={{ minHeight: '100vh' }}>
+      {/* Sidebar Desktop */}
+      <aside className="sidebar-desktop" style={{ 
         width: '280px', 
         backgroundColor: 'var(--surface)', 
         borderRight: '1px solid var(--border)',
@@ -457,8 +457,32 @@ export default function App() {
         </nav>
       </aside>
 
+      {/* Mobile Navigation */}
+      <nav className="mobile-nav">
+        <button onClick={() => setActiveTab('dashboard')} className={`mobile-nav-item ${activeTab === 'dashboard' ? 'active' : ''}`}>
+          <LayoutDashboard size={20} />
+          <span>Painel</span>
+        </button>
+        <button onClick={() => setActiveTab('agenda')} className={`mobile-nav-item ${activeTab === 'agenda' ? 'active' : ''}`}>
+          <Calendar size={20} />
+          <span>Agenda</span>
+        </button>
+        <button onClick={() => setActiveTab('athletes')} className={`mobile-nav-item ${activeTab === 'athletes' ? 'active' : ''}`}>
+          <Users size={20} />
+          <span>Atletas</span>
+        </button>
+        <button onClick={() => setActiveTab('marketing')} className={`mobile-nav-item ${activeTab === 'marketing' ? 'active' : ''}`}>
+          <Share2 size={20} />
+          <span>Marketing</span>
+        </button>
+        <button onClick={() => setActiveTab('games')} className={`mobile-nav-item ${activeTab === 'games' ? 'active' : ''}`}>
+          <Trophy size={20} />
+          <span>Jogos</span>
+        </button>
+      </nav>
+
       {/* Main Content */}
-      <main className="container" style={{ flex: 1, padding: '40px' }}>
+      <main className="container" style={{ flex: 1 }}>
         {activeTab === 'dashboard' && (
           <div>
             <div style={{ marginBottom: '32px' }}>
@@ -466,7 +490,7 @@ export default function App() {
               <p className="text-muted">Visão geral do seu time e finanças.</p>
             </div>
 
-            <div className="athlete-grid" style={{ marginBottom: '40px' }}>
+            <div className="athlete-grid dashboard-stats" style={{ marginBottom: '40px' }}>
               <div className="card" style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
                 <div style={{ padding: '12px', borderRadius: '12px', backgroundColor: 'rgba(46, 204, 113, 0.1)', color: 'var(--primary)' }}>
                   <Users size={32} />
@@ -505,7 +529,7 @@ export default function App() {
               </div>
             </div>
 
-            <div className="flex gap-4">
+            <div className="flex flex-mobile-column gap-4">
               <div className="card" style={{ flex: 1 }}>
                 <h3 style={{ marginBottom: '20px' }}>Últimos Jogos</h3>
                 {games.length === 0 ? (
@@ -559,7 +583,7 @@ export default function App() {
 
         {activeTab === 'athletes' && (
           <div>
-            <div className="flex justify-between items-center" style={{ marginBottom: '32px' }}>
+            <div className="flex flex-mobile-column justify-between items-center gap-4" style={{ marginBottom: '32px' }}>
               <div>
                 <h1 style={{ marginBottom: '4px' }}>Gestão de Atletas</h1>
                 <p className="text-muted">Cadastre e gerencie os jogadores do seu time.</p>
@@ -619,7 +643,7 @@ export default function App() {
 
         {activeTab === 'games' && (
           <div>
-            <div className="flex justify-between items-center" style={{ marginBottom: '32px' }}>
+            <div className="flex flex-mobile-column justify-between items-center gap-4" style={{ marginBottom: '32px' }}>
               <div>
                 <h1 style={{ marginBottom: '4px' }}>Gestão de Jogos</h1>
                 <p className="text-muted">Marque partidas e gerencie as convocações.</p>
@@ -911,7 +935,7 @@ export default function App() {
         {selectedGameId && (
           <div className="modal-overlay">
             <div className="modal-content card" style={{ width: '100%', maxWidth: '600px', maxHeight: '90vh', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-              <div className="flex justify-between items-center" style={{ marginBottom: '20px' }}>
+              <div className="flex flex-mobile-column justify-between items-center gap-4" style={{ marginBottom: '20px' }}>
                 <div className="flex items-center gap-3">
                   <h2 style={{ margin: 0 }}>Convocação: {games.find(g => g.id === selectedGameId)?.opponent}</h2>
                   <button 

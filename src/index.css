@@ -59,6 +59,13 @@ input:focus {
   padding: 20px;
 }
 
+@media (max-width: 768px) {
+  .container {
+    padding: 16px;
+    padding-bottom: 100px; /* Space for bottom nav */
+  }
+}
+
 .card {
   background-color: var(--surface);
   border-radius: var(--radius);
@@ -130,6 +137,13 @@ input:focus {
   gap: 20px;
 }
 
+@media (max-width: 640px) {
+  .athlete-grid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+}
+
 .athlete-card {
   transition: transform 0.2s ease;
 }
@@ -191,4 +205,70 @@ h1, h2, h3 {
 .text-muted {
   color: var(--text-muted);
   font-size: 0.875rem;
+}
+
+/* Mobile Utilities */
+@media (max-width: 768px) {
+  .sidebar-desktop {
+    display: none !important;
+  }
+  
+  .mobile-nav {
+    display: flex !important;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: var(--surface);
+    border-top: 1px solid var(--border);
+    padding: 10px 0;
+    z-index: 1000;
+    justify-content: space-around;
+    backdrop-filter: blur(10px);
+  }
+
+  .mobile-nav-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    font-size: 0.65rem;
+    color: var(--text-muted);
+    background: transparent;
+    border: none;
+    flex: 1;
+  }
+
+  .mobile-nav-item.active {
+    color: var(--primary);
+  }
+
+  .flex-mobile-column {
+    flex-direction: column !important;
+  }
+
+  .hide-mobile {
+    display: none !important;
+  }
+
+  .modal-overlay {
+    padding: 10px;
+  }
+
+  .modal-content {
+    width: 100% !important;
+    max-width: none !important;
+  }
+  
+  .dashboard-stats {
+    display: grid;
+    grid-template-columns: 1fr !important;
+    gap: 16px;
+  }
+}
+
+@media (min-width: 769px) {
+  .mobile-nav {
+    display: none !important;
+  }
 }
