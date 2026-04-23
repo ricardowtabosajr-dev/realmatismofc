@@ -7,6 +7,7 @@ export interface Athlete {
   name: string;
   position: PlayerPosition;
   phone: string;
+  avatarUrl?: string;
 }
 
 export interface Game {

@@ -16,6 +16,7 @@ CREATE TABLE IF NOT EXISTS public.athletes (
     name TEXT NOT NULL,
     position TEXT REFERENCES public.positions(name),
     phone TEXT,
+    avatar_url TEXT,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 

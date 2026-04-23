@@ -128,7 +128,12 @@ export default function App() {
       if (!supabase) return;
 
       const { data: athletesData } = await supabase.from('athletes').select('*');
-      if (athletesData) setAthletes(athletesData);
+      if (athletesData) {
+        setAthletes(athletesData.map(a => ({
+          ...a,
+          avatarUrl: a.avatar_url
+        })));
+      }
 
       const { data: gamesData } = await supabase.from('games').select('*, squad:squad_entries(*)');
       if (gamesData) {
@@ -189,7 +194,8 @@ export default function App() {
       id: newAthlete.id || crypto.randomUUID(),
       name: newAthlete.name,
       position: newAthlete.position as PlayerPosition,
-      phone: newAthlete.phone
+      phone: newAthlete.phone,
+      avatarUrl: newAthlete.avatarUrl
     }
 
     if (newAthlete.id) {
@@ -203,11 +209,12 @@ export default function App() {
         id: athlete.id,
         name: athlete.name,
         position: athlete.position,
-        phone: athlete.phone
+        phone: athlete.phone,
+        avatar_url: athlete.avatarUrl
       })
     }
 
-    setNewAthlete({ name: '', position: 'Meio-campo', phone: '' })
+    setNewAthlete({ name: '', position: 'Meio-campo', phone: '', avatarUrl: '' })
     setIsAddingAthlete(false)
   }
 
@@ -622,9 +629,18 @@ export default function App() {
                     justifyContent: 'space-between',
                     alignItems: 'center'
                   }}>
-                    <div>
-                      <div style={{ fontWeight: '700', fontSize: '1rem' }}>{athlete.name}</div>
-                      <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{athlete.position}</div>
+                    <div className="flex items-center gap-3">
+                      <div style={{ width: '44px', height: '44px', borderRadius: '50%', overflow: 'hidden', backgroundColor: 'rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid rgba(255,255,255,0.05)', flexShrink: 0 }}>
+                        {athlete.avatarUrl ? (
+                          <img src={athlete.avatarUrl} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                        ) : (
+                          <Users size={20} opacity={0.3} />
+                        )}
+                      </div>
+                      <div>
+                        <div style={{ fontWeight: '700', fontSize: '1rem' }}>{athlete.name}</div>
+                        <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{athlete.position}</div>
+                      </div>
                     </div>
                     
                     <div className="flex gap-2">
@@ -1128,15 +1144,24 @@ export default function App() {
                       position: 'absolute', left: `${x}%`, top: `${y}%`,
                       transform: 'translate(-50%, -50%)',
                       display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px',
-                      transition: 'all 0.5s ease'
+                      transition: 'all 0.5s ease',
+                      zIndex: 10
                     }}>
                       <div style={{
-                        width: '30px', height: '30px', borderRadius: '50%',
-                        backgroundColor: color, color: color === '#f1c40f' ? '#000' : 'white',
+                        width: '34px', height: '34px', borderRadius: '50%',
+                        backgroundColor: a.avatarUrl ? 'white' : color, 
+                        color: color === '#f1c40f' ? '#000' : 'white',
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        fontWeight: 800, fontSize: '0.75rem', border: '2px solid white',
-                        boxShadow: '0 3px 8px rgba(0,0,0,0.5)'
-                      }}>{a.name.charAt(0)}</div>
+                        fontWeight: 800, fontSize: '0.8rem', border: `2px solid ${color}`,
+                        boxShadow: '0 4px 10px rgba(0,0,0,0.6)',
+                        overflow: 'hidden'
+                      }}>
+                        {a.avatarUrl ? (
+                          <img src={a.avatarUrl} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                        ) : (
+                          a.name.charAt(0)
+                        )}
+                      </div>
                       <span style={{
                         fontSize: '0.55rem', fontWeight: 700, color: 'white',
                         textShadow: '1px 1px 3px rgba(0,0,0,0.9)', whiteSpace: 'nowrap',
@@ -1209,12 +1234,21 @@ export default function App() {
                 {athletes.map(athlete => (
                   <div key={athlete.id} className="card athlete-card">
                     <div className="flex justify-between items-start">
-                      <div>
-                        <span className="badge">{athlete.position}</span>
-                        <h3 style={{ marginTop: '12px', marginBottom: '4px' }}>{athlete.name}</h3>
-                        <div className="flex items-center gap-2 text-muted">
-                          <Phone size={14} />
-                          <span>{athlete.phone}</span>
+                      <div className="flex items-center gap-4">
+                        <div style={{ width: '56px', height: '56px', borderRadius: '50%', overflow: 'hidden', backgroundColor: 'rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '2px solid rgba(255,255,255,0.05)', flexShrink: 0 }}>
+                          {athlete.avatarUrl ? (
+                            <img src={athlete.avatarUrl} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                          ) : (
+                            <Users size={24} opacity={0.3} />
+                          )}
+                        </div>
+                        <div>
+                          <span className="badge" style={{ fontSize: '0.65rem' }}>{athlete.position}</span>
+                          <h3 style={{ marginTop: '4px', marginBottom: '4px', fontSize: '1.1rem' }}>{athlete.name}</h3>
+                          <div className="flex items-center gap-2 text-muted" style={{ fontSize: '0.85rem' }}>
+                            <Phone size={14} />
+                            <span>{athlete.phone}</span>
+                          </div>
                         </div>
                       </div>
                       <div className="flex gap-1">
@@ -1381,6 +1415,24 @@ export default function App() {
                     placeholder="(00) 00000-0000"
                     required
                   />
+                </div>
+                <div>
+                  <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.875rem' }}>Foto do Atleta</label>
+                  <div className="flex items-center gap-3">
+                    <div style={{ width: '48px', height: '48px', borderRadius: '50%', overflow: 'hidden', backgroundColor: 'rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid var(--border)' }}>
+                      {newAthlete.avatarUrl ? (
+                        <img src={newAthlete.avatarUrl} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      ) : (
+                        <Users size={20} opacity={0.3} />
+                      )}
+                    </div>
+                    <input 
+                      type="file" 
+                      accept="image/*"
+                      onChange={e => handleFileChange(e, (base64) => setNewAthlete({...newAthlete, avatarUrl: base64}))}
+                      style={{ fontSize: '0.75rem' }}
+                    />
+                  </div>
                 </div>
                 <div className="flex gap-2" style={{ marginTop: '8px' }}>
                   <button 
@@ -1602,9 +1654,17 @@ export default function App() {
                                     onChange={() => toggleAthleteInSquad(selectedGameId, athlete.id)}
                                     style={{ width: '20px', height: '20px', cursor: 'pointer' }}
                                   />
-                                  <div>
-                                    <div style={{ fontWeight: '600' }}>{athlete.name}</div>
-                                    <div className="flex items-center gap-2" style={{ marginTop: '4px' }}>
+                                  <div className="flex items-center gap-2">
+                                    <div style={{ width: '32px', height: '32px', borderRadius: '50%', overflow: 'hidden', backgroundColor: 'rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid rgba(255,255,255,0.05)', flexShrink: 0 }}>
+                                      {athlete.avatarUrl ? (
+                                        <img src={athlete.avatarUrl} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                      ) : (
+                                        <Users size={16} opacity={0.3} />
+                                      )}
+                                    </div>
+                                    <div>
+                                      <div style={{ fontWeight: '600', fontSize: '0.9rem' }}>{athlete.name}</div>
+                                      <div className="flex items-center gap-2" style={{ marginTop: '2px' }}>
                                       <button 
                                         onClick={() => handleAvailability(athlete, game, true)}
                                         style={{ 
@@ -1634,7 +1694,8 @@ export default function App() {
                                         Não Disponível
                                       </button>
                                     </div>
-                                    <div className="text-muted" style={{ fontSize: '0.7rem', marginTop: '2px' }}>{athlete.position}</div>
+                                      <div className="text-muted" style={{ fontSize: '0.7rem', marginTop: '2px' }}>{athlete.position}</div>
+                                    </div>
                                   </div>
                                 </div>
 
