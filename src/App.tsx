@@ -821,57 +821,65 @@ export default function App() {
                   // Slot: x%, y%, preferred position, color
                   type Slot = { x: number; y: number; role: string; color: string };
                   const F: Record<string, Slot[]> = {
+                    // 4-4-2: Clássico — 2 atacantes, 4 meias, 4 defensores
                     '4-4-2': [
-                      { x: 35, y: 14, role: 'Atacante', color: '#f1c40f' }, { x: 65, y: 14, role: 'Atacante', color: '#f1c40f' },
-                      { x: 10, y: 40, role: 'Meio-campo', color: '#3498db' }, { x: 37, y: 36, role: 'Meio-campo', color: '#3498db' },
-                      { x: 63, y: 36, role: 'Cabeça de Area', color: '#3498db' }, { x: 90, y: 40, role: 'Meio-campo', color: '#3498db' },
-                      { x: 10, y: 72, role: 'Lateral', color: '#e74c3c' }, { x: 37, y: 72, role: 'Zagueiro', color: '#e74c3c' },
-                      { x: 63, y: 72, role: 'Zagueiro', color: '#e74c3c' }, { x: 90, y: 72, role: 'Lateral', color: '#e74c3c' },
+                      { x: 35, y: 15, role: 'Atacante', color: '#f1c40f' }, { x: 65, y: 15, role: 'Atacante', color: '#f1c40f' },
+                      { x: 15, y: 40, role: 'Meio-campo', color: '#3498db' }, { x: 38, y: 40, role: 'Meio-campo', color: '#3498db' },
+                      { x: 62, y: 40, role: 'Cabeça de Area', color: '#3498db' }, { x: 85, y: 40, role: 'Meio-campo', color: '#3498db' },
+                      { x: 15, y: 70, role: 'Lateral', color: '#e74c3c' }, { x: 38, y: 70, role: 'Zagueiro', color: '#e74c3c' },
+                      { x: 62, y: 70, role: 'Zagueiro', color: '#e74c3c' }, { x: 85, y: 70, role: 'Lateral', color: '#e74c3c' },
                     ],
+                    // 4-3-3: Ofensivo — 3 atacantes, 3 meias, 4 defensores
                     '4-3-3': [
-                      { x: 15, y: 16, role: 'Atacante', color: '#f1c40f' }, { x: 50, y: 12, role: 'Atacante', color: '#f1c40f' }, { x: 85, y: 16, role: 'Atacante', color: '#f1c40f' },
-                      { x: 30, y: 42, role: 'Meio-campo', color: '#3498db' }, { x: 50, y: 38, role: 'Cabeça de Area', color: '#3498db' }, { x: 70, y: 42, role: 'Meio-campo', color: '#3498db' },
-                      { x: 10, y: 72, role: 'Lateral', color: '#e74c3c' }, { x: 37, y: 72, role: 'Zagueiro', color: '#e74c3c' },
-                      { x: 63, y: 72, role: 'Zagueiro', color: '#e74c3c' }, { x: 90, y: 72, role: 'Lateral', color: '#e74c3c' },
+                      { x: 20, y: 15, role: 'Atacante', color: '#f1c40f' }, { x: 50, y: 12, role: 'Atacante', color: '#f1c40f' }, { x: 80, y: 15, role: 'Atacante', color: '#f1c40f' },
+                      { x: 25, y: 42, role: 'Meio-campo', color: '#3498db' }, { x: 50, y: 40, role: 'Cabeça de Area', color: '#3498db' }, { x: 75, y: 42, role: 'Meio-campo', color: '#3498db' },
+                      { x: 15, y: 70, role: 'Lateral', color: '#e74c3c' }, { x: 38, y: 70, role: 'Zagueiro', color: '#e74c3c' },
+                      { x: 62, y: 70, role: 'Zagueiro', color: '#e74c3c' }, { x: 85, y: 70, role: 'Lateral', color: '#e74c3c' },
                     ],
+                    // 4-5-1: Compacto — 1 atacante, 5 meias, 4 defensores
                     '4-5-1': [
                       { x: 50, y: 12, role: 'Atacante', color: '#f1c40f' },
-                      { x: 10, y: 36, role: 'Meio-campo', color: '#3498db' }, { x: 30, y: 38, role: 'Meio-campo', color: '#3498db' },
-                      { x: 50, y: 34, role: 'Cabeça de Area', color: '#3498db' }, { x: 70, y: 38, role: 'Meio-campo', color: '#3498db' }, { x: 90, y: 36, role: 'Meio-campo', color: '#3498db' },
-                      { x: 10, y: 72, role: 'Lateral', color: '#e74c3c' }, { x: 37, y: 72, role: 'Zagueiro', color: '#e74c3c' },
-                      { x: 63, y: 72, role: 'Zagueiro', color: '#e74c3c' }, { x: 90, y: 72, role: 'Lateral', color: '#e74c3c' },
+                      { x: 10, y: 38, role: 'Meio-campo', color: '#3498db' }, { x: 30, y: 40, role: 'Meio-campo', color: '#3498db' },
+                      { x: 50, y: 38, role: 'Cabeça de Area', color: '#3498db' }, { x: 70, y: 40, role: 'Meio-campo', color: '#3498db' }, { x: 90, y: 38, role: 'Meio-campo', color: '#3498db' },
+                      { x: 15, y: 70, role: 'Lateral', color: '#e74c3c' }, { x: 38, y: 70, role: 'Zagueiro', color: '#e74c3c' },
+                      { x: 62, y: 70, role: 'Zagueiro', color: '#e74c3c' }, { x: 85, y: 70, role: 'Lateral', color: '#e74c3c' },
                     ],
+                    // 4-2-3-1: Moderno — 1 atacante, 3 meias ofensivos, 2 volantes, 4 defensores
                     '4-2-3-1': [
                       { x: 50, y: 12, role: 'Atacante', color: '#f1c40f' },
-                      { x: 15, y: 30, role: 'Meio-campo', color: '#3498db' }, { x: 50, y: 28, role: 'Meio-campo', color: '#3498db' }, { x: 85, y: 30, role: 'Meio-campo', color: '#3498db' },
-                      { x: 37, y: 50, role: 'Cabeça de Area', color: '#9b59b6' }, { x: 63, y: 50, role: 'Cabeça de Area', color: '#9b59b6' },
-                      { x: 10, y: 72, role: 'Lateral', color: '#e74c3c' }, { x: 37, y: 72, role: 'Zagueiro', color: '#e74c3c' },
-                      { x: 63, y: 72, role: 'Zagueiro', color: '#e74c3c' }, { x: 90, y: 72, role: 'Lateral', color: '#e74c3c' },
+                      { x: 20, y: 30, role: 'Meio-campo', color: '#3498db' }, { x: 50, y: 28, role: 'Meio-campo', color: '#3498db' }, { x: 80, y: 30, role: 'Meio-campo', color: '#3498db' },
+                      { x: 35, y: 50, role: 'Cabeça de Area', color: '#9b59b6' }, { x: 65, y: 50, role: 'Cabeça de Area', color: '#9b59b6' },
+                      { x: 15, y: 70, role: 'Lateral', color: '#e74c3c' }, { x: 38, y: 70, role: 'Zagueiro', color: '#e74c3c' },
+                      { x: 62, y: 70, role: 'Zagueiro', color: '#e74c3c' }, { x: 85, y: 70, role: 'Lateral', color: '#e74c3c' },
                     ],
+                    // 3-5-2: Com alas — 2 atacantes, 5 meias (alas), 3 zagueiros
                     '3-5-2': [
-                      { x: 35, y: 14, role: 'Atacante', color: '#f1c40f' }, { x: 65, y: 14, role: 'Atacante', color: '#f1c40f' },
-                      { x: 10, y: 38, role: 'Lateral', color: '#3498db' }, { x: 30, y: 40, role: 'Meio-campo', color: '#3498db' },
-                      { x: 50, y: 36, role: 'Cabeça de Area', color: '#3498db' }, { x: 70, y: 40, role: 'Meio-campo', color: '#3498db' }, { x: 90, y: 38, role: 'Lateral', color: '#3498db' },
-                      { x: 25, y: 72, role: 'Zagueiro', color: '#e74c3c' }, { x: 50, y: 72, role: 'Zagueiro', color: '#e74c3c' }, { x: 75, y: 72, role: 'Zagueiro', color: '#e74c3c' },
+                      { x: 35, y: 15, role: 'Atacante', color: '#f1c40f' }, { x: 65, y: 15, role: 'Atacante', color: '#f1c40f' },
+                      { x: 10, y: 40, role: 'Lateral', color: '#3498db' }, { x: 30, y: 42, role: 'Meio-campo', color: '#3498db' },
+                      { x: 50, y: 40, role: 'Cabeça de Area', color: '#3498db' }, { x: 70, y: 42, role: 'Meio-campo', color: '#3498db' }, { x: 90, y: 40, role: 'Lateral', color: '#3498db' },
+                      { x: 25, y: 70, role: 'Zagueiro', color: '#e74c3c' }, { x: 50, y: 70, role: 'Zagueiro', color: '#e74c3c' }, { x: 75, y: 70, role: 'Zagueiro', color: '#e74c3c' },
                     ],
+                    // 3-4-3: Ultra ofensivo — 3 atacantes, 4 meias, 3 zagueiros
                     '3-4-3': [
-                      { x: 15, y: 16, role: 'Atacante', color: '#f1c40f' }, { x: 50, y: 12, role: 'Atacante', color: '#f1c40f' }, { x: 85, y: 16, role: 'Atacante', color: '#f1c40f' },
-                      { x: 10, y: 42, role: 'Lateral', color: '#3498db' }, { x: 37, y: 40, role: 'Meio-campo', color: '#3498db' },
-                      { x: 63, y: 40, role: 'Cabeça de Area', color: '#3498db' }, { x: 90, y: 42, role: 'Lateral', color: '#3498db' },
-                      { x: 25, y: 72, role: 'Zagueiro', color: '#e74c3c' }, { x: 50, y: 72, role: 'Zagueiro', color: '#e74c3c' }, { x: 75, y: 72, role: 'Zagueiro', color: '#e74c3c' },
+                      { x: 20, y: 15, role: 'Atacante', color: '#f1c40f' }, { x: 50, y: 12, role: 'Atacante', color: '#f1c40f' }, { x: 80, y: 15, role: 'Atacante', color: '#f1c40f' },
+                      { x: 15, y: 42, role: 'Lateral', color: '#3498db' }, { x: 38, y: 42, role: 'Meio-campo', color: '#3498db' },
+                      { x: 62, y: 42, role: 'Cabeça de Area', color: '#3498db' }, { x: 85, y: 42, role: 'Lateral', color: '#3498db' },
+                      { x: 25, y: 70, role: 'Zagueiro', color: '#e74c3c' }, { x: 50, y: 70, role: 'Zagueiro', color: '#e74c3c' }, { x: 75, y: 70, role: 'Zagueiro', color: '#e74c3c' },
                     ],
+                    // 5-3-2: Defensivo com alas — 2 atacantes, 3 meias, 5 defensores
                     '5-3-2': [
-                      { x: 35, y: 14, role: 'Atacante', color: '#f1c40f' }, { x: 65, y: 14, role: 'Atacante', color: '#f1c40f' },
-                      { x: 30, y: 40, role: 'Meio-campo', color: '#3498db' }, { x: 50, y: 38, role: 'Cabeça de Area', color: '#3498db' }, { x: 70, y: 40, role: 'Meio-campo', color: '#3498db' },
-                      { x: 8, y: 65, role: 'Lateral', color: '#e74c3c' }, { x: 30, y: 72, role: 'Zagueiro', color: '#e74c3c' },
-                      { x: 50, y: 72, role: 'Zagueiro', color: '#e74c3c' }, { x: 70, y: 72, role: 'Zagueiro', color: '#e74c3c' }, { x: 92, y: 65, role: 'Lateral', color: '#e74c3c' },
+                      { x: 35, y: 15, role: 'Atacante', color: '#f1c40f' }, { x: 65, y: 15, role: 'Atacante', color: '#f1c40f' },
+                      { x: 25, y: 42, role: 'Meio-campo', color: '#3498db' }, { x: 50, y: 40, role: 'Cabeça de Area', color: '#3498db' }, { x: 75, y: 42, role: 'Meio-campo', color: '#3498db' },
+                      { x: 10, y: 70, role: 'Lateral', color: '#e74c3c' }, { x: 30, y: 70, role: 'Zagueiro', color: '#e74c3c' },
+                      { x: 50, y: 70, role: 'Zagueiro', color: '#e74c3c' }, { x: 70, y: 70, role: 'Zagueiro', color: '#e74c3c' }, { x: 90, y: 70, role: 'Lateral', color: '#e74c3c' },
                     ],
+                    // 5-4-1: Ultra defensivo — 1 atacante, 4 meias, 5 defensores
                     '5-4-1': [
                       { x: 50, y: 12, role: 'Atacante', color: '#f1c40f' },
-                      { x: 10, y: 38, role: 'Meio-campo', color: '#3498db' }, { x: 37, y: 40, role: 'Meio-campo', color: '#3498db' },
-                      { x: 63, y: 40, role: 'Cabeça de Area', color: '#3498db' }, { x: 90, y: 38, role: 'Meio-campo', color: '#3498db' },
-                      { x: 8, y: 65, role: 'Lateral', color: '#e74c3c' }, { x: 30, y: 72, role: 'Zagueiro', color: '#e74c3c' },
-                      { x: 50, y: 72, role: 'Zagueiro', color: '#e74c3c' }, { x: 70, y: 72, role: 'Zagueiro', color: '#e74c3c' }, { x: 92, y: 65, role: 'Lateral', color: '#e74c3c' },
+                      { x: 15, y: 40, role: 'Meio-campo', color: '#3498db' }, { x: 38, y: 42, role: 'Meio-campo', color: '#3498db' },
+                      { x: 62, y: 42, role: 'Cabeça de Area', color: '#3498db' }, { x: 85, y: 40, role: 'Meio-campo', color: '#3498db' },
+                      { x: 10, y: 70, role: 'Lateral', color: '#e74c3c' }, { x: 30, y: 70, role: 'Zagueiro', color: '#e74c3c' },
+                      { x: 50, y: 70, role: 'Zagueiro', color: '#e74c3c' }, { x: 70, y: 70, role: 'Zagueiro', color: '#e74c3c' }, { x: 90, y: 70, role: 'Lateral', color: '#e74c3c' },
                     ],
                   };
 
