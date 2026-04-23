@@ -370,16 +370,32 @@ export default function App() {
   }
 
   const handlePublicConfirmation = async (gameId: string, athleteId: string, status: 'confirmed' | 'declined' | 'pending') => {
-    setGames(games.map(game => {
-      if (game.id !== gameId) return game
-      return {
-        ...game,
-        squad: game.squad.map(s => s.athleteId === athleteId ? { ...s, status } : s)
-      }
-    }))
+    if (status === 'declined') {
+      // Se recusar, remove completamente da convocação (desmarca a caixinha)
+      setGames(games.map(game => {
+        if (game.id !== gameId) return game
+        return {
+          ...game,
+          squad: game.squad.filter(s => s.athleteId !== athleteId)
+        }
+      }))
 
-    if (supabase) {
-      await supabase.from('squad_entries').update({ status }).eq('game_id', gameId).eq('athlete_id', athleteId)
+      if (supabase) {
+        await supabase.from('squad_entries').delete().eq('game_id', gameId).eq('athlete_id', athleteId)
+      }
+    } else {
+      // Se confirmar ou voltar para pendente, apenas atualiza o status
+      setGames(games.map(game => {
+        if (game.id !== gameId) return game
+        return {
+          ...game,
+          squad: game.squad.map(s => s.athleteId === athleteId ? { ...s, status } : s)
+        }
+      }))
+
+      if (supabase) {
+        await supabase.from('squad_entries').update({ status }).eq('game_id', gameId).eq('athlete_id', athleteId)
+      }
     }
   }
 
