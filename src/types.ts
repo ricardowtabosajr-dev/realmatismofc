@@ -34,4 +34,5 @@ export interface TeamConfig {
   logoUrl?: string;
   logoBgType?: 'dark' | 'light';
   pixKey?: string;
+  managerPhone?: string;
 }

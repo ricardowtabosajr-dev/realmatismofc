@@ -50,6 +50,7 @@ CREATE TABLE IF NOT EXISTS public.team_config (
     logo_url TEXT,
     logo_bg_type TEXT,
     pix_key TEXT,
+    manager_phone TEXT,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 

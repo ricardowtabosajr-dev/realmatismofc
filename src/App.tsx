@@ -21,7 +21,8 @@ export default function App() {
       return {
         ...parsed,
         logoUrl: parsed.logoUrl || parsed.logo_url,
-        logoBgType: parsed.logoBgType || parsed.logo_bg_type
+        logoBgType: parsed.logoBgType || parsed.logo_bg_type,
+        managerPhone: parsed.managerPhone || parsed.manager_phone
       }
     } catch (e) {
       return { name: 'RealMatismo', pixKey: '' }
@@ -95,7 +96,8 @@ export default function App() {
         name: teamConfig.name,
         logo_url: teamConfig.logoUrl,
         logo_bg_type: teamConfig.logoBgType,
-        pix_key: teamConfig.pixKey
+        pix_key: teamConfig.pixKey,
+        manager_phone: teamConfig.managerPhone
       }).then();
     }
   }, [teamConfig])
@@ -141,7 +143,8 @@ export default function App() {
           name: configData.name,
           logoUrl: configData.logo_url,
           logoBgType: configData.logo_bg_type as 'dark' | 'light',
-          pixKey: configData.pix_key
+          pixKey: configData.pix_key,
+          managerPhone: configData.manager_phone
         });
       }
     };
@@ -277,6 +280,28 @@ export default function App() {
         score_away: scoreAway,
         match_report: matchReport
       }).eq('id', gameId);
+    }
+  }
+
+  const handleAvailability = async (athlete: Athlete, game: Game, available: boolean) => {
+    if (!available) {
+      // Se não estiver no squad, não faz nada (já está fora)
+      const isInSquad = game.squad.find(s => s.athleteId === athlete.id);
+      if (isInSquad) {
+        toggleAthleteInSquad(game.id, athlete.id);
+      }
+      
+      // Enviar mensagem de WhatsApp para o responsável
+      const message = `Aviso: O atleta ${athlete.name} não poderá comparecer ao jogo contra ${game.opponent} no dia ${formatDate(game.date)}.`;
+      const phone = teamConfig.managerPhone || '';
+      const url = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
+      window.open(url, '_blank');
+    } else {
+      // Se disponível, garante que está no squad
+      const isInSquad = game.squad.find(s => s.athleteId === athlete.id);
+      if (!isInSquad) {
+        toggleAthleteInSquad(game.id, athlete.id);
+      }
     }
   }
 
@@ -492,6 +517,16 @@ export default function App() {
               value={teamConfig.pixKey}
               onChange={e => setTeamConfig({...teamConfig, pixKey: e.target.value})}
               placeholder="E-mail ou CPF"
+              style={{ fontSize: '0.875rem', padding: '8px' }}
+            />
+          </div>
+          <div>
+            <label style={{ display: 'block', fontSize: '0.75rem', marginBottom: '4px', color: 'var(--text-muted)' }}>WHATSAPP DO RESPONSÁVEL</label>
+            <input 
+              type="text" 
+              value={teamConfig.managerPhone || ''}
+              onChange={e => setTeamConfig({...teamConfig, managerPhone: e.target.value})}
+              placeholder="Ex: 5511999999999"
               style={{ fontSize: '0.875rem', padding: '8px' }}
             />
           </div>
@@ -1122,7 +1157,37 @@ export default function App() {
                                   />
                                   <div>
                                     <div style={{ fontWeight: '600' }}>{athlete.name}</div>
-                                    <div className="text-muted" style={{ fontSize: '0.75rem' }}>{athlete.position}</div>
+                                    <div className="flex items-center gap-2" style={{ marginTop: '4px' }}>
+                                      <button 
+                                        onClick={() => handleAvailability(athlete, game, true)}
+                                        style={{ 
+                                          fontSize: '0.65rem', 
+                                          padding: '2px 8px', 
+                                          borderRadius: '4px', 
+                                          backgroundColor: isInSquad ? 'rgba(46, 204, 113, 0.2)' : 'rgba(255,255,255,0.05)',
+                                          color: isInSquad ? 'var(--primary)' : 'var(--text-muted)',
+                                          border: isInSquad ? '1px solid var(--primary)' : '1px solid var(--border)',
+                                          cursor: 'pointer'
+                                        }}
+                                      >
+                                        Disponível
+                                      </button>
+                                      <button 
+                                        onClick={() => handleAvailability(athlete, game, false)}
+                                        style={{ 
+                                          fontSize: '0.65rem', 
+                                          padding: '2px 8px', 
+                                          borderRadius: '4px', 
+                                          backgroundColor: !isInSquad ? 'rgba(239, 68, 68, 0.1)' : 'rgba(255,255,255,0.05)',
+                                          color: !isInSquad ? 'var(--danger)' : 'var(--text-muted)',
+                                          border: !isInSquad ? '1px solid var(--danger)' : '1px solid var(--border)',
+                                          cursor: 'pointer'
+                                        }}
+                                      >
+                                        Não Disponível
+                                      </button>
+                                    </div>
+                                    <div className="text-muted" style={{ fontSize: '0.7rem', marginTop: '2px' }}>{athlete.position}</div>
                                   </div>
                                 </div>
 
