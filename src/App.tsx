@@ -369,7 +369,7 @@ export default function App() {
     }
   }
 
-  const handlePublicConfirmation = async (gameId: string, athleteId: string, status: 'confirmed' | 'declined') => {
+  const handlePublicConfirmation = async (gameId: string, athleteId: string, status: 'confirmed' | 'declined' | 'pending') => {
     setGames(games.map(game => {
       if (game.id !== gameId) return game
       return {
