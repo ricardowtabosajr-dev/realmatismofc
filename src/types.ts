@@ -27,6 +27,7 @@ export interface Game {
 export interface SquadEntry {
   athleteId: string;
   paid: boolean;
+  status?: 'confirmed' | 'declined' | 'pending';
 }
 
 export interface TeamConfig {

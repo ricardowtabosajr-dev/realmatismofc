@@ -12,6 +12,7 @@ export default function App() {
   const [modalTab, setModalTab] = useState<'squad' | 'summary'>('squad')
   const [selectedGameId, setSelectedGameId] = useState<string | null>(null)
   const [previewGameId, setPreviewGameId] = useState<string | null>(null)
+  const [publicGameId, setPublicGameId] = useState<string | null>(null)
   const [formation, setFormation] = useState<string>(() => {
     return localStorage.getItem('formation') || '4-4-2'
   })
@@ -113,6 +114,14 @@ export default function App() {
     localStorage.setItem('formation', formation)
   }, [formation])
 
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    const gameId = params.get('gameId')
+    if (gameId) {
+      setPublicGameId(gameId)
+    }
+  }, [])
+
   // Initial fetch from Supabase if available
   useEffect(() => {
     const fetchData = async () => {
@@ -135,7 +144,11 @@ export default function App() {
           scoreHome: g.score_home,
           scoreAway: g.score_away,
           matchReport: g.match_report,
-          squad: g.squad.map((s: any) => ({ athleteId: s.athlete_id, paid: s.paid }))
+          squad: g.squad.map((s: any) => ({ 
+            athleteId: s.athlete_id, 
+            paid: s.paid,
+            status: s.status || 'pending'
+          }))
         })));
       }
 
@@ -324,7 +337,7 @@ export default function App() {
       if (isInSquad) {
         return { ...g, squad: g.squad.filter(s => s.athleteId !== athleteId) }
       } else {
-        return { ...g, squad: [...g.squad, { athleteId, paid: false }] }
+        return { ...g, squad: [...g.squad, { athleteId, paid: false, status: 'pending' }] }
       }
     }))
 
@@ -332,7 +345,7 @@ export default function App() {
       if (isInSquad) {
         await supabase.from('squad_entries').delete().eq('game_id', gameId).eq('athlete_id', athleteId)
       } else {
-        await supabase.from('squad_entries').insert({ game_id: gameId, athlete_id: athleteId, paid: false })
+        await supabase.from('squad_entries').insert({ game_id: gameId, athlete_id: athleteId, paid: false, status: 'pending' })
       }
     }
   }
@@ -353,6 +366,20 @@ export default function App() {
 
     if (supabase) {
       await supabase.from('squad_entries').update({ paid: !entry.paid }).eq('game_id', gameId).eq('athlete_id', athleteId)
+    }
+  }
+
+  const handlePublicConfirmation = async (gameId: string, athleteId: string, status: 'confirmed' | 'declined') => {
+    setGames(games.map(game => {
+      if (game.id !== gameId) return game
+      return {
+        ...game,
+        squad: game.squad.map(s => s.athleteId === athleteId ? { ...s, status } : s)
+      }
+    }))
+
+    if (supabase) {
+      await supabase.from('squad_entries').update({ status }).eq('game_id', gameId).eq('athlete_id', athleteId)
     }
   }
 
@@ -381,6 +408,11 @@ export default function App() {
 
     const totalArrecadado = game.squad.filter(s => s.paid).length * game.fee
     text += `\n*TOTAL ARRECADADO:* R$ ${totalArrecadado}\n`
+    
+    // Link Público para Confirmação
+    const publicUrl = `${window.location.origin}${window.location.pathname}?gameId=${gameId}`
+    text += `\n✅ *CONFIRME SUA PRESENÇA AQUI:*\n${publicUrl}\n`
+    
     text += `\n_Gerado por ${teamConfig.name}_`
 
     const encodedText = encodeURIComponent(text)
@@ -469,6 +501,133 @@ export default function App() {
         await supabase.from('games').delete().eq('id', id)
       }
     }
+  }
+
+  if (publicGameId) {
+    const game = games.find(g => g.id === publicGameId)
+    if (!game) return (
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100vh', padding: '20px', textAlign: 'center' }}>
+        <Trophy size={48} color="var(--primary)" style={{ marginBottom: '16px' }} />
+        <h2>Jogo não encontrado</h2>
+        <p className="text-muted">O link que você acessou pode estar expirado ou incorreto.</p>
+        <button onClick={() => setPublicGameId(null)} className="btn-primary" style={{ marginTop: '20px' }}>Voltar ao Início</button>
+      </div>
+    )
+
+    return (
+      <div className="public-view" style={{ minHeight: '100vh', backgroundColor: 'var(--bg)', padding: '20px' }}>
+        <div style={{ maxWidth: '600px', margin: '0 auto' }}>
+          {/* Header */}
+          <div className="card" style={{ textAlign: 'center', marginBottom: '24px', position: 'relative', overflow: 'hidden' }}>
+            <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '4px', backgroundColor: 'var(--primary)' }}></div>
+            <h2 style={{ marginBottom: '8px' }}>Convocação Oficial</h2>
+            <div style={{ fontSize: '1.2rem', fontWeight: 'bold', color: 'var(--primary)', marginBottom: '16px' }}>{teamConfig.name}</div>
+            
+            <div className="flex justify-center items-center gap-4" style={{ marginBottom: '20px' }}>
+              <div style={{ textAlign: 'center' }}>
+                <div style={{ width: '60px', height: '60px', borderRadius: '50%', backgroundColor: 'rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 8px' }}>
+                  {teamConfig.logoUrl ? <img src={teamConfig.logoUrl} style={{ width: '40px' }} /> : <Trophy size={30} />}
+                </div>
+                <div style={{ fontSize: '0.75rem', fontWeight: 'bold' }}>{teamConfig.name}</div>
+              </div>
+              <div style={{ fontSize: '1.5rem', fontWeight: '900', opacity: 0.3 }}>VS</div>
+              <div style={{ textAlign: 'center' }}>
+                <div style={{ width: '60px', height: '60px', borderRadius: '50%', backgroundColor: 'rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 8px' }}>
+                  {game.opponentLogo ? <img src={game.opponentLogo} style={{ width: '40px' }} /> : <Trophy size={30} />}
+                </div>
+                <div style={{ fontSize: '0.75rem', fontWeight: 'bold' }}>{game.opponent}</div>
+              </div>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', textAlign: 'left', backgroundColor: 'rgba(255,255,255,0.02)', padding: '16px', borderRadius: '12px' }}>
+              <div className="flex items-center gap-2 text-muted" style={{ fontSize: '0.85rem' }}>
+                <Calendar size={16} /> <span>{formatDate(game.date)}</span>
+              </div>
+              <div className="flex items-center gap-2 text-muted" style={{ fontSize: '0.85rem' }}>
+                <Clock size={16} /> <span>{game.time}h</span>
+              </div>
+              <div className="flex items-center gap-3 text-muted" style={{ fontSize: '0.85rem', gridColumn: 'span 2' }}>
+                <MapPin size={16} /> <span>{game.location}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* List */}
+          <div className="card">
+            <h3 style={{ marginBottom: '20px', display: 'flex', justifyContent: 'space-between' }}>
+              Lista de Atletas
+              <span style={{ fontSize: '0.85rem', color: 'var(--primary)' }}>{game.squad.filter(s => s.status === 'confirmed').length} Confirmados</span>
+            </h3>
+            
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              {game.squad.map(entry => {
+                const athlete = athletes.find(a => a.id === entry.athleteId)
+                if (!athlete) return null
+                
+                return (
+                  <div key={athlete.id} style={{ 
+                    padding: '12px', 
+                    borderRadius: '12px', 
+                    backgroundColor: 'var(--surface-hover)',
+                    border: entry.status === 'confirmed' ? '1px solid var(--primary)' : entry.status === 'declined' ? '1px solid var(--danger)' : '1px solid transparent',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center'
+                  }}>
+                    <div>
+                      <div style={{ fontWeight: '700', fontSize: '1rem' }}>{athlete.name}</div>
+                      <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{athlete.position}</div>
+                    </div>
+                    
+                    <div className="flex gap-2">
+                      {entry.status === 'pending' ? (
+                        <>
+                          <button 
+                            onClick={() => handlePublicConfirmation(game.id, athlete.id, 'confirmed')}
+                            className="btn-primary" 
+                            style={{ padding: '6px 12px', fontSize: '0.75rem' }}
+                          >
+                            Vou
+                          </button>
+                          <button 
+                            onClick={() => handlePublicConfirmation(game.id, athlete.id, 'declined')}
+                            className="btn-secondary" 
+                            style={{ padding: '6px 12px', fontSize: '0.75rem', color: 'var(--danger)' }}
+                          >
+                            Não vou
+                          </button>
+                        </>
+                      ) : (
+                        <div className="flex items-center gap-2">
+                          <span style={{ 
+                            fontSize: '0.75rem', 
+                            fontWeight: 'bold', 
+                            color: entry.status === 'confirmed' ? 'var(--primary)' : 'var(--danger)',
+                            textTransform: 'uppercase'
+                          }}>
+                            {entry.status === 'confirmed' ? 'Confirmado ✓' : 'Recusado ✕'}
+                          </span>
+                          <button 
+                            onClick={() => handlePublicConfirmation(game.id, athlete.id, 'pending')}
+                            style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', fontSize: '0.7rem', cursor: 'pointer', textDecoration: 'underline' }}
+                          >
+                            Alterar
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+
+          <div style={{ textAlign: 'center', marginTop: '24px', color: 'var(--text-muted)', fontSize: '0.8rem' }}>
+            Powered by {teamConfig.name} Manager
+          </div>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -1433,6 +1592,17 @@ export default function App() {
 
                                 {isInSquad && (
                                   <div className="flex items-center gap-2">
+                                    <div style={{ 
+                                      fontSize: '0.65rem', 
+                                      padding: '2px 8px', 
+                                      borderRadius: '4px', 
+                                      backgroundColor: squadMember?.status === 'confirmed' ? 'rgba(46, 204, 113, 0.1)' : squadMember?.status === 'declined' ? 'rgba(239, 68, 68, 0.1)' : 'rgba(255,255,255,0.05)',
+                                      color: squadMember?.status === 'confirmed' ? 'var(--primary)' : squadMember?.status === 'declined' ? 'var(--danger)' : 'var(--text-muted)',
+                                      fontWeight: 'bold',
+                                      border: squadMember?.status === 'confirmed' ? '1px solid var(--primary)' : '1px solid transparent'
+                                    }}>
+                                      {squadMember?.status === 'confirmed' ? '✓ CONFIRMADO' : squadMember?.status === 'declined' ? '✕ RECUSADO' : 'PENDENTE'}
+                                    </div>
                                      <button 
                                       onClick={() => shareIndividualPix(athlete, game)}
                                       className="btn-secondary"
