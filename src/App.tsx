@@ -539,19 +539,51 @@ export default function App() {
             <h2 style={{ marginBottom: '8px' }}>Convocação Oficial</h2>
             <div style={{ fontSize: '1.2rem', fontWeight: 'bold', color: 'var(--primary)', marginBottom: '16px' }}>{teamConfig.name}</div>
             
-            <div className="flex justify-center items-center gap-4" style={{ marginBottom: '20px' }}>
-              <div style={{ textAlign: 'center' }}>
-                <div style={{ width: '60px', height: '60px', borderRadius: '50%', backgroundColor: 'rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 8px' }}>
-                  {teamConfig.logoUrl ? <img src={teamConfig.logoUrl} style={{ width: '40px' }} /> : <Trophy size={30} />}
+            <div className="flex justify-center items-center gap-2" style={{ marginBottom: '24px' }}>
+              <div style={{ flex: 1, textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                <div style={{ 
+                  width: '70px', 
+                  height: '70px', 
+                  borderRadius: '50%', 
+                  backgroundColor: 'rgba(255,255,255,0.03)', 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  justifyContent: 'center', 
+                  marginBottom: '10px',
+                  border: '1px solid rgba(255,255,255,0.05)',
+                  overflow: 'hidden'
+                }}>
+                  {teamConfig.logoUrl ? (
+                    <img src={teamConfig.logoUrl} style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+                  ) : (
+                    <Trophy size={32} color="var(--primary)" />
+                  )}
                 </div>
-                <div style={{ fontSize: '0.75rem', fontWeight: 'bold' }}>{teamConfig.name}</div>
+                <div style={{ fontSize: '0.8rem', fontWeight: '800', lineHeight: '1.2', color: '#fff' }}>{teamConfig.name}</div>
               </div>
-              <div style={{ fontSize: '1.5rem', fontWeight: '900', opacity: 0.3 }}>VS</div>
-              <div style={{ textAlign: 'center' }}>
-                <div style={{ width: '60px', height: '60px', borderRadius: '50%', backgroundColor: 'rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 8px' }}>
-                  {game.opponentLogo ? <img src={game.opponentLogo} style={{ width: '40px' }} /> : <Trophy size={30} />}
+
+              <div style={{ fontSize: '1.2rem', fontWeight: '900', opacity: 0.2, padding: '0 10px', marginTop: '-20px' }}>VS</div>
+
+              <div style={{ flex: 1, textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                <div style={{ 
+                  width: '70px', 
+                  height: '70px', 
+                  borderRadius: '50%', 
+                  backgroundColor: 'rgba(255,255,255,0.03)', 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  justifyContent: 'center', 
+                  marginBottom: '10px',
+                  border: '1px solid rgba(255,255,255,0.05)',
+                  overflow: 'hidden'
+                }}>
+                  {game.opponentLogo ? (
+                    <img src={game.opponentLogo} style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+                  ) : (
+                    <Trophy size={32} color="var(--primary)" />
+                  )}
                 </div>
-                <div style={{ fontSize: '0.75rem', fontWeight: 'bold' }}>{game.opponent}</div>
+                <div style={{ fontSize: '0.8rem', fontWeight: '800', lineHeight: '1.2', color: '#fff' }}>{game.opponent}</div>
               </div>
             </div>
 
