@@ -12,6 +12,9 @@ export default function App() {
   const [modalTab, setModalTab] = useState<'squad' | 'summary'>('squad')
   const [selectedGameId, setSelectedGameId] = useState<string | null>(null)
   const [previewGameId, setPreviewGameId] = useState<string | null>(null)
+  const [formation, setFormation] = useState<string>(() => {
+    return localStorage.getItem('formation') || '4-4-2'
+  })
   
   const [teamConfig, setTeamConfig] = useState<TeamConfig>(() => {
     const saved = localStorage.getItem('teamConfig')
@@ -105,6 +108,10 @@ export default function App() {
   useEffect(() => {
     localStorage.setItem('positions', JSON.stringify(positions))
   }, [positions])
+
+  useEffect(() => {
+    localStorage.setItem('formation', formation)
+  }, [formation])
 
   // Initial fetch from Supabase if available
   useEffect(() => {
@@ -727,6 +734,231 @@ export default function App() {
                     );
                   })}
                 </div>
+              </div>
+            </div>
+
+            {/* Arrecadação por Jogo */}
+            <div className="flex flex-mobile-column gap-4" style={{ marginTop: '24px' }}>
+              <div className="card" style={{ flex: 1 }}>
+                <h3 style={{ marginBottom: '20px' }}>Arrecadação por Jogo</h3>
+                {games.length === 0 ? (
+                  <p className="text-muted">Nenhum dado financeiro disponível.</p>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                    {games.slice().sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).slice(0, 5).map(game => {
+                      const collected = game.squad.filter(s => s.paid).length * game.fee;
+                      const expected = game.squad.length * game.fee;
+                      const pct = expected > 0 ? (collected / expected) * 100 : 0;
+                      return (
+                        <div key={game.id}>
+                          <div className="flex justify-between items-center" style={{ marginBottom: '6px' }}>
+                            <div className="flex items-center gap-2">
+                              <div style={{ width: '24px', height: '24px', borderRadius: '4px', backgroundColor: 'rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', flexShrink: 0 }}>
+                                {game.opponentLogo ? (
+                                  <img src={game.opponentLogo} style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+                                ) : (
+                                  <Trophy size={12} opacity={0.3} />
+                                )}
+                              </div>
+                              <span style={{ fontWeight: '600', fontSize: '0.85rem' }}>vs {game.opponent}</span>
+                              <span className="text-muted" style={{ fontSize: '0.7rem' }}>{formatDate(game.date)}</span>
+                            </div>
+                            <span style={{ color: 'var(--primary)', fontWeight: '700', fontSize: '0.9rem' }}>R$ {collected}</span>
+                          </div>
+                          <div style={{ width: '100%', height: '6px', backgroundColor: 'var(--surface-hover)', borderRadius: '3px', overflow: 'hidden' }}>
+                            <div style={{ width: `${pct}%`, height: '100%', backgroundColor: 'var(--primary)', transition: 'width 0.5s ease' }}></div>
+                          </div>
+                          <div className="text-muted" style={{ fontSize: '0.7rem', marginTop: '2px' }}>
+                            {game.squad.filter(s => s.paid).length} / {game.squad.length} pagos ({Math.round(pct)}%)
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+
+              {/* Campo Tático - Próxima Convocação */}
+              <div className="card" style={{ flex: 1 }}>
+                <div className="flex justify-between items-center" style={{ marginBottom: '20px' }}>
+                  <h3>Próxima Convocação Tática</h3>
+                  <select
+                    value={formation}
+                    onChange={e => setFormation(e.target.value)}
+                    style={{
+                      padding: '6px 12px',
+                      borderRadius: '8px',
+                      backgroundColor: 'var(--surface-hover)',
+                      border: '1px solid var(--border)',
+                      color: 'var(--text)',
+                      fontSize: '0.8rem',
+                      fontWeight: 700,
+                      cursor: 'pointer'
+                    }}
+                  >
+                    <option value="4-4-2">4-4-2</option>
+                    <option value="4-3-3">4-3-3</option>
+                    <option value="4-5-1">4-5-1</option>
+                    <option value="4-2-3-1">4-2-3-1</option>
+                    <option value="3-5-2">3-5-2</option>
+                    <option value="3-4-3">3-4-3</option>
+                    <option value="5-3-2">5-3-2</option>
+                    <option value="5-4-1">5-4-1</option>
+                  </select>
+                </div>
+                {(() => {
+                  const nextGame = games
+                    .filter(g => new Date(g.date + 'T' + (g.time || '23:59')) >= new Date())
+                    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())[0];
+
+                  if (!nextGame || nextGame.squad.length === 0) {
+                    return <p className="text-muted">{!nextGame ? 'Nenhum jogo futuro agendado.' : 'Nenhum atleta convocado para o próximo jogo.'}</p>;
+                  }
+
+                  const squadIds = nextGame.squad.map(s => s.athleteId);
+                  const squadAthletes = athletes.filter(a => squadIds.includes(a.id));
+
+                  // Slot: x%, y%, preferred position, color
+                  type Slot = { x: number; y: number; role: string; color: string };
+                  const F: Record<string, Slot[]> = {
+                    '4-4-2': [
+                      { x: 35, y: 14, role: 'Atacante', color: '#f1c40f' }, { x: 65, y: 14, role: 'Atacante', color: '#f1c40f' },
+                      { x: 10, y: 40, role: 'Meio-campo', color: '#3498db' }, { x: 37, y: 36, role: 'Meio-campo', color: '#3498db' },
+                      { x: 63, y: 36, role: 'Cabeça de Area', color: '#3498db' }, { x: 90, y: 40, role: 'Meio-campo', color: '#3498db' },
+                      { x: 10, y: 70, role: 'Lateral', color: '#e74c3c' }, { x: 37, y: 72, role: 'Zagueiro', color: '#e74c3c' },
+                      { x: 63, y: 72, role: 'Zagueiro', color: '#e74c3c' }, { x: 90, y: 70, role: 'Lateral', color: '#e74c3c' },
+                    ],
+                    '4-3-3': [
+                      { x: 15, y: 16, role: 'Atacante', color: '#f1c40f' }, { x: 50, y: 12, role: 'Atacante', color: '#f1c40f' }, { x: 85, y: 16, role: 'Atacante', color: '#f1c40f' },
+                      { x: 30, y: 42, role: 'Meio-campo', color: '#3498db' }, { x: 50, y: 38, role: 'Cabeça de Area', color: '#3498db' }, { x: 70, y: 42, role: 'Meio-campo', color: '#3498db' },
+                      { x: 10, y: 70, role: 'Lateral', color: '#e74c3c' }, { x: 37, y: 72, role: 'Zagueiro', color: '#e74c3c' },
+                      { x: 63, y: 72, role: 'Zagueiro', color: '#e74c3c' }, { x: 90, y: 70, role: 'Lateral', color: '#e74c3c' },
+                    ],
+                    '4-5-1': [
+                      { x: 50, y: 12, role: 'Atacante', color: '#f1c40f' },
+                      { x: 10, y: 36, role: 'Meio-campo', color: '#3498db' }, { x: 30, y: 38, role: 'Meio-campo', color: '#3498db' },
+                      { x: 50, y: 34, role: 'Cabeça de Area', color: '#3498db' }, { x: 70, y: 38, role: 'Meio-campo', color: '#3498db' }, { x: 90, y: 36, role: 'Meio-campo', color: '#3498db' },
+                      { x: 10, y: 70, role: 'Lateral', color: '#e74c3c' }, { x: 37, y: 72, role: 'Zagueiro', color: '#e74c3c' },
+                      { x: 63, y: 72, role: 'Zagueiro', color: '#e74c3c' }, { x: 90, y: 70, role: 'Lateral', color: '#e74c3c' },
+                    ],
+                    '4-2-3-1': [
+                      { x: 50, y: 12, role: 'Atacante', color: '#f1c40f' },
+                      { x: 15, y: 30, role: 'Meio-campo', color: '#3498db' }, { x: 50, y: 28, role: 'Meio-campo', color: '#3498db' }, { x: 85, y: 30, role: 'Meio-campo', color: '#3498db' },
+                      { x: 37, y: 50, role: 'Cabeça de Area', color: '#9b59b6' }, { x: 63, y: 50, role: 'Cabeça de Area', color: '#9b59b6' },
+                      { x: 10, y: 70, role: 'Lateral', color: '#e74c3c' }, { x: 37, y: 72, role: 'Zagueiro', color: '#e74c3c' },
+                      { x: 63, y: 72, role: 'Zagueiro', color: '#e74c3c' }, { x: 90, y: 70, role: 'Lateral', color: '#e74c3c' },
+                    ],
+                    '3-5-2': [
+                      { x: 35, y: 14, role: 'Atacante', color: '#f1c40f' }, { x: 65, y: 14, role: 'Atacante', color: '#f1c40f' },
+                      { x: 10, y: 38, role: 'Lateral', color: '#3498db' }, { x: 30, y: 40, role: 'Meio-campo', color: '#3498db' },
+                      { x: 50, y: 36, role: 'Cabeça de Area', color: '#3498db' }, { x: 70, y: 40, role: 'Meio-campo', color: '#3498db' }, { x: 90, y: 38, role: 'Lateral', color: '#3498db' },
+                      { x: 25, y: 72, role: 'Zagueiro', color: '#e74c3c' }, { x: 50, y: 72, role: 'Zagueiro', color: '#e74c3c' }, { x: 75, y: 72, role: 'Zagueiro', color: '#e74c3c' },
+                    ],
+                    '3-4-3': [
+                      { x: 15, y: 16, role: 'Atacante', color: '#f1c40f' }, { x: 50, y: 12, role: 'Atacante', color: '#f1c40f' }, { x: 85, y: 16, role: 'Atacante', color: '#f1c40f' },
+                      { x: 10, y: 42, role: 'Lateral', color: '#3498db' }, { x: 37, y: 40, role: 'Meio-campo', color: '#3498db' },
+                      { x: 63, y: 40, role: 'Cabeça de Area', color: '#3498db' }, { x: 90, y: 42, role: 'Lateral', color: '#3498db' },
+                      { x: 25, y: 72, role: 'Zagueiro', color: '#e74c3c' }, { x: 50, y: 72, role: 'Zagueiro', color: '#e74c3c' }, { x: 75, y: 72, role: 'Zagueiro', color: '#e74c3c' },
+                    ],
+                    '5-3-2': [
+                      { x: 35, y: 14, role: 'Atacante', color: '#f1c40f' }, { x: 65, y: 14, role: 'Atacante', color: '#f1c40f' },
+                      { x: 30, y: 40, role: 'Meio-campo', color: '#3498db' }, { x: 50, y: 38, role: 'Cabeça de Area', color: '#3498db' }, { x: 70, y: 40, role: 'Meio-campo', color: '#3498db' },
+                      { x: 8, y: 65, role: 'Lateral', color: '#e74c3c' }, { x: 30, y: 72, role: 'Zagueiro', color: '#e74c3c' },
+                      { x: 50, y: 72, role: 'Zagueiro', color: '#e74c3c' }, { x: 70, y: 72, role: 'Zagueiro', color: '#e74c3c' }, { x: 92, y: 65, role: 'Lateral', color: '#e74c3c' },
+                    ],
+                    '5-4-1': [
+                      { x: 50, y: 12, role: 'Atacante', color: '#f1c40f' },
+                      { x: 10, y: 38, role: 'Meio-campo', color: '#3498db' }, { x: 37, y: 40, role: 'Meio-campo', color: '#3498db' },
+                      { x: 63, y: 40, role: 'Cabeça de Area', color: '#3498db' }, { x: 90, y: 38, role: 'Meio-campo', color: '#3498db' },
+                      { x: 8, y: 65, role: 'Lateral', color: '#e74c3c' }, { x: 30, y: 72, role: 'Zagueiro', color: '#e74c3c' },
+                      { x: 50, y: 72, role: 'Zagueiro', color: '#e74c3c' }, { x: 70, y: 72, role: 'Zagueiro', color: '#e74c3c' }, { x: 92, y: 65, role: 'Lateral', color: '#e74c3c' },
+                    ],
+                  };
+
+                  const slots = F[formation] || F['4-4-2'];
+                  const gk = squadAthletes.filter(a => a.position === 'Goleiro');
+                  const outfield = squadAthletes.filter(a => a.position !== 'Goleiro');
+
+                  // Assign athletes to slots: exact match first, then fill remaining
+                  const assigned: { athlete: typeof outfield[0]; slot: Slot }[] = [];
+                  const usedSlots = new Set<number>();
+                  const usedAthletes = new Set<string>();
+
+                  // Pass 1: exact position match
+                  for (const a of outfield) {
+                    for (let i = 0; i < slots.length; i++) {
+                      if (!usedSlots.has(i) && !usedAthletes.has(a.id) && slots[i].role === a.position) {
+                        assigned.push({ athlete: a, slot: slots[i] });
+                        usedSlots.add(i);
+                        usedAthletes.add(a.id);
+                        break;
+                      }
+                    }
+                  }
+                  // Pass 2: remaining athletes to remaining slots
+                  for (const a of outfield) {
+                    if (usedAthletes.has(a.id)) continue;
+                    for (let i = 0; i < slots.length; i++) {
+                      if (!usedSlots.has(i)) {
+                        assigned.push({ athlete: a, slot: slots[i] });
+                        usedSlots.add(i);
+                        usedAthletes.add(a.id);
+                        break;
+                      }
+                    }
+                  }
+
+                  const renderPlayer = (a: typeof outfield[0], color: string, x: number, y: number) => (
+                    <div key={a.id} style={{
+                      position: 'absolute', left: `${x}%`, top: `${y}%`,
+                      transform: 'translate(-50%, -50%)',
+                      display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px',
+                      transition: 'all 0.5s ease'
+                    }}>
+                      <div style={{
+                        width: '30px', height: '30px', borderRadius: '50%',
+                        backgroundColor: color, color: color === '#f1c40f' ? '#000' : 'white',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        fontWeight: 800, fontSize: '0.75rem', border: '2px solid white',
+                        boxShadow: '0 3px 8px rgba(0,0,0,0.5)'
+                      }}>{a.name.charAt(0)}</div>
+                      <span style={{
+                        fontSize: '0.55rem', fontWeight: 700, color: 'white',
+                        textShadow: '1px 1px 3px rgba(0,0,0,0.9)', whiteSpace: 'nowrap',
+                        maxWidth: '55px', overflow: 'hidden', textOverflow: 'ellipsis'
+                      }}>{a.name.split(' ')[0]}</span>
+                    </div>
+                  );
+
+                  return (
+                    <div>
+                      <div style={{ textAlign: 'center', marginBottom: '12px', fontSize: '0.85rem', fontWeight: '700', color: 'var(--primary)' }}>
+                        vs {nextGame.opponent} — {formatDate(nextGame.date)}
+                      </div>
+                      <div style={{
+                        position: 'relative', width: '100%', aspectRatio: '3/4',
+                        background: 'linear-gradient(180deg, #1a6b1a 0%, #228B22 50%, #2d8a2d 100%)',
+                        border: '3px solid rgba(255,255,255,0.6)', borderRadius: '12px', overflow: 'hidden'
+                      }}>
+                        <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, border: '2px solid rgba(255,255,255,0.35)', margin: '8px', pointerEvents: 'none' }}></div>
+                        <div style={{ position: 'absolute', top: '50%', left: '8px', right: '8px', height: '1px', backgroundColor: 'rgba(255,255,255,0.35)', pointerEvents: 'none' }}></div>
+                        <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', width: '60px', height: '60px', border: '1px solid rgba(255,255,255,0.35)', borderRadius: '50%', pointerEvents: 'none' }}></div>
+                        <div style={{ position: 'absolute', top: '8px', left: '50%', transform: 'translateX(-50%)', width: '40%', height: '12%', border: '1px solid rgba(255,255,255,0.35)', borderTop: 'none', pointerEvents: 'none' }}></div>
+                        <div style={{ position: 'absolute', bottom: '8px', left: '50%', transform: 'translateX(-50%)', width: '40%', height: '12%', border: '1px solid rgba(255,255,255,0.35)', borderBottom: 'none', pointerEvents: 'none' }}></div>
+
+                        {assigned.map(({ athlete, slot }) => renderPlayer(athlete, slot.color, slot.x, slot.y))}
+                        {gk.map(a => renderPlayer(a, '#f39c12', 50, 89))}
+                      </div>
+
+                      <div style={{ display: 'flex', justifyContent: 'center', gap: '12px', marginTop: '12px', flexWrap: 'wrap' }}>
+                        <div className="flex items-center gap-1"><div style={{ width: '10px', height: '10px', borderRadius: '50%', backgroundColor: '#f1c40f' }}></div><span style={{ fontSize: '0.65rem' }}>Atacante</span></div>
+                        <div className="flex items-center gap-1"><div style={{ width: '10px', height: '10px', borderRadius: '50%', backgroundColor: '#3498db' }}></div><span style={{ fontSize: '0.65rem' }}>Meio</span></div>
+                        <div className="flex items-center gap-1"><div style={{ width: '10px', height: '10px', borderRadius: '50%', backgroundColor: '#e74c3c' }}></div><span style={{ fontSize: '0.65rem' }}>Defesa</span></div>
+                        <div className="flex items-center gap-1"><div style={{ width: '10px', height: '10px', borderRadius: '50%', backgroundColor: '#f39c12' }}></div><span style={{ fontSize: '0.65rem' }}>Goleiro</span></div>
+                      </div>
+                    </div>
+                  );
+                })()}
               </div>
             </div>
           </div>
