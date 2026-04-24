@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
+import Cropper from 'react-easy-crop'
 import { Plus, Users, Trophy, LayoutDashboard, Trash2, Edit2, Phone, Calendar, Clock, MapPin, DollarSign, Share2 } from 'lucide-react'
 import type { Athlete, Game, PlayerPosition, TeamConfig } from './types'
 import { DEFAULT_POSITIONS } from './types'
@@ -16,7 +17,17 @@ export default function App() {
   const [formation, setFormation] = useState<string>(() => {
     return localStorage.getItem('formation') || '4-4-2'
   })
+
+  // States for WhatsApp-style cropping
+  const [crop, setCrop] = useState({ x: 0, y: 0 })
+  const [zoom, setZoom] = useState(1)
+  const [croppedAreaPixels, setCroppedAreaPixels] = useState<any>(null)
+  const [rawImage, setRawImage] = useState<string | null>(null)
   
+  const onCropComplete = useCallback((_croppedArea: any, croppedAreaPixels: any) => {
+    setCroppedAreaPixels(croppedAreaPixels)
+  }, [])
+
   const [teamConfig, setTeamConfig] = useState<TeamConfig>(() => {
     const saved = localStorage.getItem('teamConfig')
     if (!saved) return { name: 'RealMatismo', pixKey: '' }
@@ -186,16 +197,51 @@ export default function App() {
     return bgType === 'light' ? 'multiply' as const : 'screen' as const
   }
 
+  const generateCroppedImage = async (): Promise<string> => {
+    if (!rawImage || !croppedAreaPixels) return '';
+    
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.src = rawImage;
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        canvas.width = 300;
+        canvas.height = 300;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return resolve('');
+
+        ctx.fillStyle = '#1e293b';
+        ctx.fillRect(0, 0, 300, 300);
+        
+        ctx.drawImage(
+          img,
+          croppedAreaPixels.x,
+          croppedAreaPixels.y,
+          croppedAreaPixels.width,
+          croppedAreaPixels.height,
+          0,
+          0,
+          300,
+          300
+        );
+        resolve(canvas.toDataURL('image/jpeg', 0.85));
+      };
+      img.onerror = () => resolve('');
+    });
+  };
+
   const handleAddAthlete = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!newAthlete.name || !newAthlete.phone) return
+
+    const finalAvatarUrl = rawImage ? await generateCroppedImage() : newAthlete.avatarUrl;
 
     const athlete: Athlete = {
       id: newAthlete.id || crypto.randomUUID(),
       name: newAthlete.name,
       position: newAthlete.position as PlayerPosition,
       phone: newAthlete.phone,
-      avatarUrl: newAthlete.avatarUrl
+      avatarUrl: finalAvatarUrl
     }
 
     if (newAthlete.id) {
@@ -215,11 +261,17 @@ export default function App() {
     }
 
     setNewAthlete({ name: '', position: 'Meio-campo', phone: '', avatarUrl: '' })
+    setRawImage(null)
+    setZoom(1)
+    setCrop({ x: 0, y: 0 })
     setIsAddingAthlete(false)
   }
 
   const handleEditAthlete = (athlete: Athlete) => {
     setNewAthlete(athlete)
+    setRawImage(null)
+    setZoom(1)
+    setCrop({ x: 0, y: 0 })
     setIsAddingAthlete(true)
   }
 
@@ -243,7 +295,11 @@ export default function App() {
     if (file) {
       const reader = new FileReader()
       reader.onloadend = () => {
-        callback(reader.result as string)
+        const base64 = reader.result as string;
+        setRawImage(base64);
+        setZoom(1);
+        setCrop({ x: 0, y: 0 });
+        callback(base64);
       }
       reader.readAsDataURL(file)
     }
@@ -310,27 +366,32 @@ export default function App() {
     }
   }
 
-  const handleAvailability = async (athlete: Athlete, game: Game, available: boolean) => {
-    if (!available) {
-      // Se não estiver no squad, não faz nada (já está fora)
-      const isInSquad = game.squad.find(s => s.athleteId === athlete.id);
-      if (isInSquad) {
-        toggleAthleteInSquad(game.id, athlete.id);
-      }
-      
-      // Enviar mensagem de WhatsApp para o responsável
-      const message = `Aviso: O atleta ${athlete.name} não poderá comparecer ao jogo contra ${game.opponent} no dia ${formatDate(game.date)}.`;
-      const phone = teamConfig.managerPhone || '';
-      const url = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
-      window.open(url, '_blank');
+  const toggleAthleteStatus = async (gameId: string, athleteId: string, isStarter: boolean) => {
+    const game = games.find(g => g.id === gameId);
+    if (!game) return;
+
+    const squadMember = game.squad.find(s => s.athleteId === athleteId);
+    let updatedSquad;
+
+    if (!squadMember) {
+      updatedSquad = [...game.squad, { athleteId, paid: false, status: 'confirmed' as const, isStarter }];
     } else {
-      // Se disponível, garante que está no squad
-      const isInSquad = game.squad.find(s => s.athleteId === athlete.id);
-      if (!isInSquad) {
-        toggleAthleteInSquad(game.id, athlete.id);
-      }
+      updatedSquad = game.squad.map(s => 
+        s.athleteId === athleteId ? { ...s, isStarter, status: 'confirmed' as const } : s
+      );
     }
-  }
+
+    setGames(games.map(g => g.id === gameId ? { ...g, squad: updatedSquad } : g));
+
+    if (supabase) {
+      await supabase.from('squad_entries').upsert({
+        game_id: gameId,
+        athlete_id: athleteId,
+        is_starter: isStarter,
+        status: 'confirmed'
+      });
+    }
+  };
 
   const toggleAthleteInSquad = async (gameId: string, athleteId: string) => {
     const game = games.find(g => g.id === gameId);
@@ -338,21 +399,22 @@ export default function App() {
 
     const isInSquad = game.squad.find(s => s.athleteId === athleteId);
     
-    setGames(games.map(g => {
-      if (g.id !== gameId) return g
-      
-      if (isInSquad) {
-        return { ...g, squad: g.squad.filter(s => s.athleteId !== athleteId) }
-      } else {
-        return { ...g, squad: [...g.squad, { athleteId, paid: false, status: 'pending' }] }
+    if (isInSquad) {
+      setGames(games.map(g => g.id === gameId ? { ...g, squad: g.squad.filter(s => s.athleteId !== athleteId) } : g));
+      if (supabase) {
+        await supabase.from('squad_entries').delete().eq('game_id', gameId).eq('athlete_id', athleteId);
       }
-    }))
-
-    if (supabase) {
-      if (isInSquad) {
-        await supabase.from('squad_entries').delete().eq('game_id', gameId).eq('athlete_id', athleteId)
-      } else {
-        await supabase.from('squad_entries').insert({ game_id: gameId, athlete_id: athleteId, paid: false, status: 'pending' })
+    } else {
+      const newEntry = { athleteId, paid: false, status: 'confirmed' as const, isStarter: true };
+      setGames(games.map(g => g.id === gameId ? { ...g, squad: [...g.squad, newEntry] } : g));
+      if (supabase) {
+        await supabase.from('squad_entries').insert({
+          game_id: gameId,
+          athlete_id: athleteId,
+          paid: false,
+          status: 'confirmed',
+          is_starter: true
+        });
       }
     }
   }
@@ -1038,8 +1100,11 @@ export default function App() {
                     return <p className="text-muted">{!nextGame ? 'Nenhum jogo futuro agendado.' : 'Nenhum atleta convocado para o próximo jogo.'}</p>;
                   }
 
-                  const squadIds = nextGame.squad.map(s => s.athleteId);
-                  const squadAthletes = athletes.filter(a => squadIds.includes(a.id));
+                  const starters = nextGame.squad.filter(s => s.isStarter);
+                  const benchEntries = nextGame.squad.filter(s => !s.isStarter);
+                  
+                  const starterAthletes = athletes.filter(a => starters.some(s => s.athleteId === a.id));
+                  const benchList = athletes.filter(a => benchEntries.some(s => s.athleteId === a.id));
 
                   // Slot: x%, y%, preferred position, color
                   type Slot = { x: number; y: number; role: string; color: string };
@@ -1107,13 +1172,16 @@ export default function App() {
                   };
 
                   const slots = F[formation] || F['4-4-2'];
-                  const gk = squadAthletes.filter(a => a.position === 'Goleiro');
-                  const outfield = squadAthletes.filter(a => a.position !== 'Goleiro');
+                  const gk = starterAthletes.filter(a => a.position === 'Goleiro');
+                  const outfield = starterAthletes.filter(a => a.position !== 'Goleiro');
+                  
+                  const starterGK = gk[0];
+                  const usedAthletes = new Set<string>();
+                  if (starterGK) usedAthletes.add(starterGK.id);
 
                   // Assign athletes to slots: exact match first, then fill remaining
                   const assigned: { athlete: typeof outfield[0]; slot: Slot }[] = [];
                   const usedSlots = new Set<number>();
-                  const usedAthletes = new Set<string>();
 
                   // Pass 1: exact position match
                   for (const a of outfield) {
@@ -1138,6 +1206,8 @@ export default function App() {
                       }
                     }
                   }
+
+                  const bench = [...benchList, ...starterAthletes.filter(a => !usedAthletes.has(a.id))];
 
                   const renderPlayer = (a: typeof outfield[0], color: string, x: number, y: number) => (
                     <div key={a.id} style={{
@@ -1173,23 +1243,76 @@ export default function App() {
                   return (
                     <div>
                       <div style={{ textAlign: 'center', marginBottom: '12px', fontSize: '0.85rem', fontWeight: '700', color: 'var(--primary)' }}>
-                        vs {nextGame.opponent} — {formatDate(nextGame.date)}
+                        {teamConfig.name} vs {nextGame.opponent} — {formatDate(nextGame.date)}
                       </div>
-                      <div style={{
-                        position: 'relative', width: '100%', aspectRatio: '3/4',
-                        background: 'linear-gradient(180deg, #1a6b1a 0%, #228B22 50%, #2d8a2d 100%)',
-                        border: '3px solid rgba(255,255,255,0.6)', borderRadius: '12px', overflow: 'hidden'
-                      }}>
-                        <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, border: '2px solid rgba(255,255,255,0.35)', margin: '8px', pointerEvents: 'none' }}></div>
-                        <div style={{ position: 'absolute', top: '50%', left: '8px', right: '8px', height: '1px', backgroundColor: 'rgba(255,255,255,0.35)', pointerEvents: 'none' }}></div>
-                        <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', width: '60px', height: '60px', border: '1px solid rgba(255,255,255,0.35)', borderRadius: '50%', pointerEvents: 'none' }}></div>
-                        <div style={{ position: 'absolute', top: '8px', left: '50%', transform: 'translateX(-50%)', width: '40%', height: '12%', border: '1px solid rgba(255,255,255,0.35)', borderTop: 'none', pointerEvents: 'none' }}></div>
-                        <div style={{ position: 'absolute', bottom: '8px', left: '50%', transform: 'translateX(-50%)', width: '40%', height: '12%', border: '1px solid rgba(255,255,255,0.35)', borderBottom: 'none', pointerEvents: 'none' }}></div>
+                      
+                      <div style={{ display: 'flex', gap: '12px', alignItems: 'stretch' }}>
+                        {/* Banco de Reservas - Lado de fora do campo */}
+                        {bench.length > 0 && (
+                          <div style={{
+                            width: '65px',
+                            backgroundColor: 'rgba(255,255,255,0.03)', 
+                            borderRadius: '12px', 
+                            padding: '12px 4px',
+                            display: 'flex', 
+                            flexDirection: 'column', 
+                            gap: '12px', 
+                            alignItems: 'center',
+                            border: '1px solid rgba(255,255,255,0.05)',
+                            boxShadow: 'inset 0 0 15px rgba(0,0,0,0.2)'
+                          }}>
+                            <div style={{ 
+                              fontSize: '0.45rem', 
+                              fontWeight: '900', 
+                              color: 'var(--primary)', 
+                              letterSpacing: '1.5px', 
+                              marginBottom: '6px', 
+                              textTransform: 'uppercase',
+                              writingMode: 'vertical-lr',
+                              transform: 'rotate(180deg)',
+                              opacity: 0.8
+                            }}>Reservas</div>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', overflowY: 'auto', width: '100%', alignItems: 'center' }} className="no-scrollbar">
+                              {bench.map(a => (
+                                <div key={a.id} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px' }}>
+                                  <div style={{ 
+                                    width: '28px', height: '28px', borderRadius: '50%', 
+                                    border: '1.5px solid rgba(255,255,255,0.2)', overflow: 'hidden',
+                                    backgroundColor: 'rgba(255,255,255,0.05)'
+                                  }}>
+                                    {a.avatarUrl ? (
+                                      <img src={a.avatarUrl} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                    ) : (
+                                      <div style={{ fontSize: '0.5rem', color: 'rgba(255,255,255,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>{a.name.charAt(0)}</div>
+                                    )}
+                                  </div>
+                                  <span style={{ 
+                                    fontSize: '0.4rem', color: 'var(--text-muted)', fontWeight: '600',
+                                    maxWidth: '50px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap'
+                                  }}>{a.name.split(' ')[0]}</span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
 
-                        {assigned.map(({ athlete, slot }) => renderPlayer(athlete, slot.color, slot.x, slot.y))}
-                        {gk.map(a => renderPlayer(a, '#f39c12', 50, 89))}
+                        {/* Campo de Futebol */}
+                        <div style={{
+                          position: 'relative', flex: 1, aspectRatio: '3/4',
+                          background: 'linear-gradient(180deg, #1a6b1a 0%, #228B22 50%, #2d8a2d 100%)',
+                          border: '3px solid rgba(255,255,255,0.6)', borderRadius: '12px', overflow: 'hidden'
+                        }}>
+                          <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, border: '2px solid rgba(255,255,255,0.35)', margin: '8px', pointerEvents: 'none' }}></div>
+                          <div style={{ position: 'absolute', top: '50%', left: '8px', right: '8px', height: '1px', backgroundColor: 'rgba(255,255,255,0.35)', pointerEvents: 'none' }}></div>
+                          <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', width: '60px', height: '60px', border: '1px solid rgba(255,255,255,0.35)', borderRadius: '50%', pointerEvents: 'none' }}></div>
+                          <div style={{ position: 'absolute', top: '8px', left: '50%', transform: 'translateX(-50%)', width: '40%', height: '12%', border: '1px solid rgba(255,255,255,0.35)', borderTop: 'none', pointerEvents: 'none' }}></div>
+                          <div style={{ position: 'absolute', bottom: '8px', left: '50%', transform: 'translateX(-50%)', width: '40%', height: '12%', border: '1px solid rgba(255,255,255,0.35)', borderBottom: 'none', pointerEvents: 'none' }}></div>
+
+                          {assigned.map(({ athlete, slot }) => renderPlayer(athlete, slot.color, slot.x, slot.y))}
+                          {starterGK && renderPlayer(starterGK, '#f39c12', 50, 89)}
+                        </div>
                       </div>
-
+                      
                       <div style={{ display: 'flex', justifyContent: 'center', gap: '12px', marginTop: '12px', flexWrap: 'wrap' }}>
                         <div className="flex items-center gap-1"><div style={{ width: '10px', height: '10px', borderRadius: '50%', backgroundColor: '#f1c40f' }}></div><span style={{ fontSize: '0.65rem' }}>Atacante</span></div>
                         <div className="flex items-center gap-1"><div style={{ width: '10px', height: '10px', borderRadius: '50%', backgroundColor: '#3498db' }}></div><span style={{ fontSize: '0.65rem' }}>Meio</span></div>
@@ -1418,20 +1541,80 @@ export default function App() {
                 </div>
                 <div>
                   <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.875rem' }}>Foto do Atleta</label>
-                  <div className="flex items-center gap-3">
-                    <div style={{ width: '48px', height: '48px', borderRadius: '50%', overflow: 'hidden', backgroundColor: 'rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid var(--border)' }}>
-                      {newAthlete.avatarUrl ? (
-                        <img src={newAthlete.avatarUrl} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                      ) : (
-                        <Users size={20} opacity={0.3} />
+                  <div className="flex flex-col items-center gap-4" style={{ marginBottom: '20px' }}>
+                    {rawImage ? (
+                      <div style={{ position: 'relative', width: '100%', height: '250px', backgroundColor: '#000', borderRadius: '12px', overflow: 'hidden' }}>
+                        <Cropper
+                          image={rawImage}
+                          crop={crop}
+                          zoom={zoom}
+                          aspect={1}
+                          cropShape="round"
+                          showGrid={false}
+                          onCropChange={setCrop}
+                          onZoomChange={setZoom}
+                          onCropComplete={onCropComplete}
+                          restrictPosition={false}
+                          zoomWithScroll={true}
+                        />
+                      </div>
+                    ) : (
+                      <div style={{ 
+                        width: '120px', 
+                        height: '120px', 
+                        borderRadius: '50%', 
+                        border: '2px solid var(--primary)',
+                        overflow: 'hidden',
+                        backgroundColor: 'var(--surface-hover)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center'
+                      }}>
+                        {newAthlete.avatarUrl ? (
+                          <img src={newAthlete.avatarUrl} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                        ) : (
+                          <Users size={40} className="text-muted" />
+                        )}
+                      </div>
+                    )}
+                    
+                    <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                      <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                        <label className="btn-secondary" style={{ flex: 1, textAlign: 'center', fontSize: '0.8rem', padding: '8px', cursor: 'pointer' }}>
+                          {rawImage ? 'Trocar Foto' : 'Escolher Foto'}
+                          <input 
+                            type="file" 
+                            accept="image/*" 
+                            style={{ display: 'none' }}
+                            onChange={(e) => handleFileChange(e, (base64) => setNewAthlete({...newAthlete, avatarUrl: base64}))}
+                          />
+                        </label>
+                        {rawImage && (
+                          <button 
+                            type="button"
+                            onClick={() => setRawImage(null)}
+                            className="btn-secondary"
+                            style={{ padding: '8px', color: 'var(--danger)' }}
+                          >
+                            <Trash2 size={18} />
+                          </button>
+                        )}
+                      </div>
+                      
+                      {rawImage && (
+                        <div style={{ padding: '0 10px' }}>
+                          <label style={{ fontSize: '0.7rem', color: 'var(--text-muted)', display: 'block', marginBottom: '8px', textAlign: 'center' }}>
+                            Arraste a foto para posicionar • Use o slider para o zoom
+                          </label>
+                          <input 
+                            type="range" min="1" max="3" step="0.01" 
+                            value={zoom} 
+                            onChange={(e) => setZoom(parseFloat(e.target.value))}
+                            style={{ width: '100%', accentColor: 'var(--primary)' }}
+                          />
+                        </div>
                       )}
                     </div>
-                    <input 
-                      type="file" 
-                      accept="image/*"
-                      onChange={e => handleFileChange(e, (base64) => setNewAthlete({...newAthlete, avatarUrl: base64}))}
-                      style={{ fontSize: '0.75rem' }}
-                    />
                   </div>
                 </div>
                 <div className="flex gap-2" style={{ marginTop: '8px' }}>
@@ -1666,32 +1849,32 @@ export default function App() {
                                       <div style={{ fontWeight: '600', fontSize: '0.9rem' }}>{athlete.name}</div>
                                       <div className="flex items-center gap-2" style={{ marginTop: '2px' }}>
                                       <button 
-                                        onClick={() => handleAvailability(athlete, game, true)}
+                                        onClick={() => toggleAthleteStatus(game.id, athlete.id, true)}
                                         style={{ 
                                           fontSize: '0.65rem', 
                                           padding: '2px 8px', 
                                           borderRadius: '4px', 
-                                          backgroundColor: isInSquad ? 'rgba(46, 204, 113, 0.2)' : 'rgba(255,255,255,0.05)',
-                                          color: isInSquad ? 'var(--primary)' : 'var(--text-muted)',
-                                          border: isInSquad ? '1px solid var(--primary)' : '1px solid var(--border)',
+                                          backgroundColor: squadMember?.isStarter ? 'rgba(46, 204, 113, 0.2)' : 'rgba(255,255,255,0.05)',
+                                          color: squadMember?.isStarter ? 'var(--primary)' : 'var(--text-muted)',
+                                          border: squadMember?.isStarter ? '1px solid var(--primary)' : '1px solid var(--border)',
                                           cursor: 'pointer'
                                         }}
                                       >
-                                        Disponível
+                                        Titular
                                       </button>
                                       <button 
-                                        onClick={() => handleAvailability(athlete, game, false)}
+                                        onClick={() => toggleAthleteStatus(game.id, athlete.id, false)}
                                         style={{ 
                                           fontSize: '0.65rem', 
                                           padding: '2px 8px', 
                                           borderRadius: '4px', 
-                                          backgroundColor: !isInSquad ? 'rgba(239, 68, 68, 0.1)' : 'rgba(255,255,255,0.05)',
-                                          color: !isInSquad ? 'var(--danger)' : 'var(--text-muted)',
-                                          border: !isInSquad ? '1px solid var(--danger)' : '1px solid var(--border)',
+                                          backgroundColor: (isInSquad && !squadMember?.isStarter) ? 'rgba(52, 152, 219, 0.2)' : 'rgba(255,255,255,0.05)',
+                                          color: (isInSquad && !squadMember?.isStarter) ? '#3498db' : 'var(--text-muted)',
+                                          border: (isInSquad && !squadMember?.isStarter) ? '1px solid #3498db' : '1px solid var(--border)',
                                           cursor: 'pointer'
                                         }}
                                       >
-                                        Não Disponível
+                                        Reserva
                                       </button>
                                     </div>
                                       <div className="text-muted" style={{ fontSize: '0.7rem', marginTop: '2px' }}>{athlete.position}</div>

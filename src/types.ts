@@ -29,6 +29,7 @@ export interface SquadEntry {
   athleteId: string;
   paid: boolean;
   status?: 'confirmed' | 'declined' | 'pending';
+  isStarter?: boolean;
 }
 
 export interface TeamConfig {

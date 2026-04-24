@@ -42,6 +42,7 @@ CREATE TABLE IF NOT EXISTS public.squad_entries (
     athlete_id UUID REFERENCES public.athletes(id) ON DELETE CASCADE,
     paid BOOLEAN DEFAULT false,
     status TEXT DEFAULT 'pending' CHECK (status IN ('confirmed', 'declined', 'pending')),
+    is_starter BOOLEAN DEFAULT true,
     PRIMARY KEY (game_id, athlete_id)
 );
 
