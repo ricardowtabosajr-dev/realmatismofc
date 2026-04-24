@@ -1925,7 +1925,7 @@ export default function App() {
                       </>
                     ) : (
                       <div className="flex flex-col gap-4" style={{ animation: 'fadeIn 0.3s ease' }}>
-                        {/* Placar Estilo Estádio - Agora ocupando largura total */}
+                        {/* Placar Estilo Estádio - Homogêneo e Simétrico */}
                         <div className="card" style={{ 
                           background: 'linear-gradient(180deg, rgba(30, 41, 59, 0.8) 0%, rgba(15, 23, 42, 0.95) 100%)',
                           border: '1px solid rgba(255, 255, 255, 0.1)',
@@ -1937,49 +1937,80 @@ export default function App() {
 
                           <div className="flex items-center justify-between gap-2" style={{ position: 'relative', zIndex: 1 }}>
                             {/* Time da Casa */}
-                            <div style={{ flex: 1, textAlign: 'center' }}>
-                              <div style={{ width: '60px', height: '60px', margin: '0 auto 8px', borderRadius: '50%', backgroundColor: 'rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '2px solid var(--primary)', overflow: 'hidden' }}>
+                            <div style={{ flex: 1, textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                              <div style={{ width: '60px', height: '60px', marginBottom: '12px', borderRadius: '50%', backgroundColor: 'rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '2px solid var(--primary)', overflow: 'hidden', boxShadow: '0 0 15px rgba(46, 204, 113, 0.2)' }}>
                                 {teamConfig.logoUrl ? (
                                   <img src={teamConfig.logoUrl} style={{ width: '80%', height: '80%', objectFit: 'contain', mixBlendMode: getBlendMode(teamConfig.logoBgType) }} />
                                 ) : (
                                   <Trophy size={28} color="var(--primary)" />
                                 )}
                               </div>
-                              <div style={{ fontWeight: '800', fontSize: '0.75rem', color: '#fff', marginBottom: '8px' }}>{teamConfig.name.toUpperCase()}</div>
-                              <div className="flex items-center justify-center gap-1">
+                              <div style={{ 
+                                fontWeight: '800', 
+                                fontSize: '0.7rem', 
+                                color: '#fff', 
+                                marginBottom: '12px', 
+                                minHeight: '2.4rem', 
+                                display: 'flex', 
+                                alignItems: 'center', 
+                                justifyContent: 'center',
+                                lineHeight: '1.2',
+                                width: '100%',
+                                padding: '0 4px'
+                              }}>
+                                {teamConfig.name.toUpperCase()}
+                              </div>
+                              <div className="flex items-center justify-center gap-1.5">
                                 <button 
                                   onClick={() => handleUpdateGameSummary(selectedGameId, Math.max(0, (game.scoreHome || 0) - 1), game.scoreAway || 0, game.matchReport || '')}
-                                  style={{ width: '24px', height: '24px', borderRadius: '50%', border: '1px solid rgba(255,255,255,0.2)', background: 'transparent', color: '#fff', cursor: 'pointer', fontSize: '12px' }}
+                                  style={{ width: '26px', height: '26px', borderRadius: '50%', border: '1px solid rgba(255,255,255,0.2)', background: 'transparent', color: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px' }}
                                 >-</button>
-                                <div style={{ fontSize: '2rem', fontWeight: '900', color: '#fff', minWidth: '35px', fontFamily: "'Monospace', sans-serif" }}>{game.scoreHome || 0}</div>
+                                <div style={{ fontSize: '2.2rem', fontWeight: '900', color: '#fff', minWidth: '40px', fontFamily: "'Monospace', sans-serif", textAlign: 'center' }}>{game.scoreHome || 0}</div>
                                 <button 
                                   onClick={() => handleUpdateGameSummary(selectedGameId, (game.scoreHome || 0) + 1, game.scoreAway || 0, game.matchReport || '')}
-                                  style={{ width: '24px', height: '24px', borderRadius: '50%', border: '1px solid var(--primary)', background: 'rgba(46, 204, 113, 0.1)', color: 'var(--primary)', cursor: 'pointer', fontSize: '12px' }}
+                                  style={{ width: '26px', height: '26px', borderRadius: '50%', border: '1px solid var(--primary)', background: 'rgba(46, 204, 113, 0.1)', color: 'var(--primary)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px' }}
                                 >+</button>
                               </div>
                             </div>
 
-                            <div style={{ fontSize: '1rem', fontWeight: '900', color: 'var(--primary)', opacity: 0.3 }}>X</div>
+                            {/* Separador Centralizado */}
+                            <div style={{ height: '100%', display: 'flex', alignItems: 'center', marginTop: '75px' }}>
+                              <div style={{ fontSize: '1.2rem', fontWeight: '900', color: 'var(--primary)', opacity: 0.3 }}>X</div>
+                            </div>
 
                             {/* Time Visitante */}
-                            <div style={{ flex: 1, textAlign: 'center' }}>
-                              <div style={{ width: '60px', height: '60px', margin: '0 auto 8px', borderRadius: '50%', backgroundColor: 'rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '2px solid #e74c3c', overflow: 'hidden' }}>
+                            <div style={{ flex: 1, textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                              <div style={{ width: '60px', height: '60px', marginBottom: '12px', borderRadius: '50%', backgroundColor: 'rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '2px solid #e74c3c', overflow: 'hidden', boxShadow: '0 0 15px rgba(231, 76, 60, 0.2)' }}>
                                 {game.opponentLogo ? (
-                                  <img src={game.opponentLogo} style={{ width: '80%', height: '80%', objectFit: 'contain', mixBlendMode: getBlendMode(game.opponentLogoBg) }} />
+                                  <img src={game.opponentLogo} style={{ width: '100%', height: '100%', objectFit: 'contain', mixBlendMode: getBlendMode(game.opponentLogoBg) }} />
                                 ) : (
                                   <Trophy size={28} color="#e74c3c" />
                                 )}
                               </div>
-                              <div style={{ fontWeight: '800', fontSize: '0.75rem', color: '#fff', marginBottom: '8px' }}>{game.opponent.toUpperCase()}</div>
-                              <div className="flex items-center justify-center gap-1">
+                              <div style={{ 
+                                fontWeight: '800', 
+                                fontSize: '0.7rem', 
+                                color: '#fff', 
+                                marginBottom: '12px', 
+                                minHeight: '2.4rem', 
+                                display: 'flex', 
+                                alignItems: 'center', 
+                                justifyContent: 'center',
+                                lineHeight: '1.2',
+                                width: '100%',
+                                padding: '0 4px'
+                              }}>
+                                {game.opponent.toUpperCase()}
+                              </div>
+                              <div className="flex items-center justify-center gap-1.5">
                                 <button 
                                   onClick={() => handleUpdateGameSummary(selectedGameId, game.scoreHome || 0, Math.max(0, (game.scoreAway || 0) - 1), game.matchReport || '')}
-                                  style={{ width: '24px', height: '24px', borderRadius: '50%', border: '1px solid rgba(255,255,255,0.2)', background: 'transparent', color: '#fff', cursor: 'pointer', fontSize: '12px' }}
+                                  style={{ width: '26px', height: '26px', borderRadius: '50%', border: '1px solid rgba(255,255,255,0.2)', background: 'transparent', color: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px' }}
                                 >-</button>
-                                <div style={{ fontSize: '2rem', fontWeight: '900', color: '#fff', minWidth: '35px', fontFamily: "'Monospace', sans-serif" }}>{game.scoreAway || 0}</div>
+                                <div style={{ fontSize: '2.2rem', fontWeight: '900', color: '#fff', minWidth: '40px', fontFamily: "'Monospace', sans-serif", textAlign: 'center' }}>{game.scoreAway || 0}</div>
                                 <button 
                                   onClick={() => handleUpdateGameSummary(selectedGameId, game.scoreHome || 0, (game.scoreAway || 0) + 1, game.matchReport || '')}
-                                  style={{ width: '24px', height: '24px', borderRadius: '50%', border: '1px solid #e74c3c', background: 'rgba(231, 76, 60, 0.1)', color: '#e74c3c', cursor: 'pointer', fontSize: '12px' }}
+                                  style={{ width: '26px', height: '26px', borderRadius: '50%', border: '1px solid #e74c3c', background: 'rgba(231, 76, 60, 0.1)', color: '#e74c3c', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px' }}
                                 >+</button>
                               </div>
                             </div>
