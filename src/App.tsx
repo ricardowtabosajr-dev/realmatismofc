@@ -2008,8 +2008,16 @@ export default function App() {
                                   const newReport = currentReport + (currentReport ? '\n' : '') + '🟨 CARTÃO AMARELO: ';
                                   handleUpdateGameSummary(selectedGameId, game.scoreHome || 0, game.scoreAway || 0, newReport);
                                 }}
-                                style={{ padding: '6px 10px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(241, 196, 15, 0.1)', color: '#f1c40f', fontSize: '0.75rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
+                                style={{ padding: '6px 10px', borderRadius: '8px', border: '1px solid rgba(255, 241, 196, 0.1)', background: 'rgba(241, 196, 15, 0.1)', color: '#f1c40f', fontSize: '0.75rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
                               >🟨 Amarelo</button>
+                              <button 
+                                onClick={() => {
+                                  const currentReport = game.matchReport || '';
+                                  const newReport = currentReport + (currentReport ? '\n' : '') + '🟥 CARTÃO VERMELHO: ';
+                                  handleUpdateGameSummary(selectedGameId, game.scoreHome || 0, game.scoreAway || 0, newReport);
+                                }}
+                                style={{ padding: '6px 10px', borderRadius: '8px', border: '1px solid rgba(231, 76, 60, 0.1)', background: 'rgba(231, 76, 60, 0.1)', color: '#e74c3c', fontSize: '0.75rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
+                              >🟥 Vermelho</button>
                             </div>
                           </div>
                           
@@ -2160,8 +2168,11 @@ export default function App() {
                               </div>
                             </div>
                           </div>
-                          <div style={{ color: 'var(--primary)', fontWeight: 'bold' }}>
-                            FINALIZADO
+                          <div className="flex items-center gap-3">
+                            <div style={{ color: 'var(--primary)', fontWeight: 'bold', fontSize: '0.75rem' }}>
+                              FINALIZADO
+                            </div>
+                            <button onClick={() => setSelectedGameId(game.id)} className="btn-secondary" style={{ padding: '6px 12px', fontSize: '0.8rem' }}>Ver Detalhes</button>
                           </div>
                         </div>
                       ))
