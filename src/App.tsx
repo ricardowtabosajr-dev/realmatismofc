@@ -926,6 +926,61 @@ export default function App() {
               <p className="text-muted">Visão geral do seu time e finanças.</p>
             </div>
 
+            {/* Mobile-only settings block */}
+            <div className="show-only-mobile" style={{ marginBottom: '32px' }}>
+              <h3 style={{ marginBottom: '16px', fontSize: '1rem' }}>Configurações do Time</h3>
+              <div className="card" style={{ padding: '16px', backgroundColor: 'rgba(255,255,255,0.03)', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.75rem', marginBottom: '4px', color: 'var(--text-muted)' }}>CHAVE PIX</label>
+                  <input 
+                    type="text" 
+                    value={teamConfig.pixKey || ''}
+                    onChange={e => setTeamConfig({...teamConfig, pixKey: e.target.value})}
+                    placeholder="E-mail ou CPF"
+                    style={{ fontSize: '0.875rem', padding: '8px' }}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.75rem', marginBottom: '4px', color: 'var(--text-muted)' }}>WHATSAPP DO RESPONSÁVEL</label>
+                  <input 
+                    type="text" 
+                    value={teamConfig.managerPhone || ''}
+                    onChange={e => setTeamConfig({...teamConfig, managerPhone: e.target.value})}
+                    placeholder="Ex: 5511999999999"
+                    style={{ fontSize: '0.875rem', padding: '8px' }}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.75rem', marginBottom: '4px', color: 'var(--text-muted)' }}>ESCUDO DO TIME</label>
+                  <div className="flex items-center gap-3">
+                    <div style={{ width: '48px', height: '48px', borderRadius: '8px', overflow: 'hidden', backgroundColor: 'rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      {teamConfig.logoUrl ? (
+                        <img src={teamConfig.logoUrl} style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+                      ) : (
+                        <Trophy size={20} opacity={0.3} />
+                      )}
+                    </div>
+                    <input 
+                      type="file" 
+                      accept="image/*"
+                      onChange={e => handleFileChange(e, (base64) => setTeamConfig({...teamConfig, logoUrl: base64}))}
+                      style={{ fontSize: '0.75rem' }}
+                    />
+                  </div>
+                  <div className="flex gap-2" style={{ marginTop: '6px' }}>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.7rem', cursor: 'pointer', color: teamConfig.logoBgType !== 'light' ? 'var(--primary)' : 'var(--text-muted)' }}>
+                      <input type="radio" name="mobileTeamLogoBg" checked={teamConfig.logoBgType !== 'light'} onChange={() => setTeamConfig({...teamConfig, logoBgType: 'dark'})} style={{ width: '12px', height: '12px' }} />
+                      Fundo Escuro
+                    </label>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.7rem', cursor: 'pointer', color: teamConfig.logoBgType === 'light' ? 'var(--primary)' : 'var(--text-muted)' }}>
+                      <input type="radio" name="mobileTeamLogoBg" checked={teamConfig.logoBgType === 'light'} onChange={() => setTeamConfig({...teamConfig, logoBgType: 'light'})} style={{ width: '12px', height: '12px' }} />
+                      Fundo Claro
+                    </label>
+                  </div>
+                </div>
+              </div>
+            </div>
+
             <div className="athlete-grid dashboard-stats" style={{ marginBottom: '40px' }}>
               <div className="card" style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
                 <div style={{ padding: '12px', borderRadius: '12px', backgroundColor: 'rgba(46, 204, 113, 0.1)', color: 'var(--primary)' }}>

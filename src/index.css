@@ -118,6 +118,10 @@ input:focus {
 .p-3 { padding: 12px; }
 .text-primary { color: var(--primary); }
 
+.show-only-mobile {
+  display: none;
+}
+
 @keyframes fadeIn {
   from { opacity: 0; transform: translateY(8px); }
   to { opacity: 1; transform: translateY(0); }
@@ -280,6 +284,10 @@ h1, h2, h3 {
 
   .hide-mobile {
     display: none !important;
+  }
+
+  .show-only-mobile {
+    display: block !important;
   }
 
   .modal-overlay {
