@@ -163,7 +163,8 @@ export default function App() {
           squad: g.squad.map((s: any) => ({ 
             athleteId: s.athlete_id, 
             paid: s.paid,
-            status: s.status || 'pending'
+            status: s.status || 'pending',
+            isStarter: s.is_starter !== undefined ? s.is_starter : true
           }))
         })));
       }
