@@ -374,21 +374,22 @@ export default function App() {
     let updatedSquad;
 
     if (!squadMember) {
-      updatedSquad = [...game.squad, { athleteId, paid: false, status: 'confirmed' as const, isStarter }];
+      updatedSquad = [...game.squad, { athleteId, paid: false, status: 'pending' as const, isStarter }];
     } else {
       updatedSquad = game.squad.map(s => 
-        s.athleteId === athleteId ? { ...s, isStarter, status: 'confirmed' as const } : s
+        s.athleteId === athleteId ? { ...s, isStarter } : s
       );
     }
 
     setGames(games.map(g => g.id === gameId ? { ...g, squad: updatedSquad } : g));
 
-    if (supabase) {
+    const entry = updatedSquad?.find(s => s.athleteId === athleteId);
+    if (supabase && entry) {
       await supabase.from('squad_entries').upsert({
         game_id: gameId,
         athlete_id: athleteId,
         is_starter: isStarter,
-        status: 'confirmed'
+        status: entry.status || 'pending'
       });
     }
   };
