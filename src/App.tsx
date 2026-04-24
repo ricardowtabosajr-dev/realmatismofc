@@ -1993,14 +1993,14 @@ export default function App() {
                               <Edit2 size={18} className="text-primary" />
                               <h4 style={{ margin: 0 }}>Súmula do Jogo</h4>
                             </div>
-                            <div className="flex gap-2">
+                            <div className="flex gap-1.5">
                               <button 
                                 onClick={() => {
                                   const currentReport = game.matchReport || '';
                                   const newReport = currentReport + (currentReport ? '\n' : '') + '⚽ GOL: ';
                                   handleUpdateGameSummary(selectedGameId, game.scoreHome || 0, game.scoreAway || 0, newReport);
                                 }}
-                                style={{ padding: '6px 10px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(255,255,255,0.05)', color: '#fff', fontSize: '0.75rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
+                                style={{ padding: '4px 8px', borderRadius: '6px', border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(255,255,255,0.05)', color: '#fff', fontSize: '0.65rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '3px' }}
                               >⚽ Gol</button>
                               <button 
                                 onClick={() => {
@@ -2008,7 +2008,7 @@ export default function App() {
                                   const newReport = currentReport + (currentReport ? '\n' : '') + '🟨 CARTÃO AMARELO: ';
                                   handleUpdateGameSummary(selectedGameId, game.scoreHome || 0, game.scoreAway || 0, newReport);
                                 }}
-                                style={{ padding: '6px 10px', borderRadius: '8px', border: '1px solid rgba(255, 241, 196, 0.1)', background: 'rgba(241, 196, 15, 0.1)', color: '#f1c40f', fontSize: '0.75rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
+                                style={{ padding: '4px 8px', borderRadius: '6px', border: '1px solid rgba(255, 241, 196, 0.1)', background: 'rgba(241, 196, 15, 0.1)', color: '#f1c40f', fontSize: '0.65rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '3px' }}
                               >🟨 Amarelo</button>
                               <button 
                                 onClick={() => {
@@ -2016,7 +2016,7 @@ export default function App() {
                                   const newReport = currentReport + (currentReport ? '\n' : '') + '🟥 CARTÃO VERMELHO: ';
                                   handleUpdateGameSummary(selectedGameId, game.scoreHome || 0, game.scoreAway || 0, newReport);
                                 }}
-                                style={{ padding: '6px 10px', borderRadius: '8px', border: '1px solid rgba(231, 76, 60, 0.1)', background: 'rgba(231, 76, 60, 0.1)', color: '#e74c3c', fontSize: '0.75rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
+                                style={{ padding: '4px 8px', borderRadius: '6px', border: '1px solid rgba(231, 76, 60, 0.1)', background: 'rgba(231, 76, 60, 0.1)', color: '#e74c3c', fontSize: '0.65rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '3px' }}
                               >🟥 Vermelho</button>
                             </div>
                           </div>
