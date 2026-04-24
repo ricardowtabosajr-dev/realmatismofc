@@ -1931,86 +1931,86 @@ export default function App() {
                           border: '1px solid rgba(255, 255, 255, 0.1)',
                           position: 'relative',
                           overflow: 'hidden',
-                          padding: '24px'
+                          padding: '20px 12px'
                         }}>
                           <div style={{ position: 'absolute', top: '-50%', left: '50%', transform: 'translateX(-50%)', width: '200px', height: '200px', background: 'var(--primary)', filter: 'blur(100px)', opacity: 0.1, pointerEvents: 'none' }}></div>
 
-                          <div className="flex items-center justify-between gap-2" style={{ position: 'relative', zIndex: 1 }}>
+                          <div className="flex items-center justify-between gap-1" style={{ position: 'relative', zIndex: 1 }}>
                             {/* Time da Casa */}
                             <div style={{ flex: 1, textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                              <div style={{ width: '60px', height: '60px', marginBottom: '12px', borderRadius: '50%', backgroundColor: 'rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '2px solid var(--primary)', overflow: 'hidden', boxShadow: '0 0 15px rgba(46, 204, 113, 0.2)' }}>
+                              <div style={{ width: '55px', height: '55px', marginBottom: '10px', borderRadius: '50%', backgroundColor: 'rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '2px solid var(--primary)', overflow: 'hidden', boxShadow: '0 0 12px rgba(46, 204, 113, 0.15)' }}>
                                 {teamConfig.logoUrl ? (
                                   <img src={teamConfig.logoUrl} style={{ width: '80%', height: '80%', objectFit: 'contain', mixBlendMode: getBlendMode(teamConfig.logoBgType) }} />
                                 ) : (
-                                  <Trophy size={28} color="var(--primary)" />
+                                  <Trophy size={24} color="var(--primary)" />
                                 )}
                               </div>
                               <div style={{ 
                                 fontWeight: '800', 
-                                fontSize: '0.7rem', 
+                                fontSize: '0.65rem', 
                                 color: '#fff', 
-                                marginBottom: '12px', 
-                                minHeight: '2.4rem', 
+                                marginBottom: '10px', 
+                                minHeight: '2.2rem', 
                                 display: 'flex', 
                                 alignItems: 'center', 
                                 justifyContent: 'center',
                                 lineHeight: '1.2',
                                 width: '100%',
-                                padding: '0 4px'
+                                padding: '0 2px'
                               }}>
                                 {teamConfig.name.toUpperCase()}
                               </div>
-                              <div className="flex items-center justify-center gap-1.5">
+                              <div className="flex items-center justify-center gap-1">
                                 <button 
                                   onClick={() => handleUpdateGameSummary(selectedGameId, Math.max(0, (game.scoreHome || 0) - 1), game.scoreAway || 0, game.matchReport || '')}
-                                  style={{ width: '26px', height: '26px', borderRadius: '50%', border: '1px solid rgba(255,255,255,0.2)', background: 'transparent', color: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px' }}
+                                  style={{ width: '24px', height: '24px', borderRadius: '50%', border: '1px solid rgba(255,255,255,0.2)', background: 'transparent', color: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px' }}
                                 >-</button>
-                                <div style={{ fontSize: '2.2rem', fontWeight: '900', color: '#fff', minWidth: '40px', fontFamily: "'Monospace', sans-serif", textAlign: 'center' }}>{game.scoreHome || 0}</div>
+                                <div style={{ fontSize: '2rem', fontWeight: '900', color: '#fff', minWidth: '35px', fontFamily: "'Monospace', sans-serif", textAlign: 'center' }}>{game.scoreHome || 0}</div>
                                 <button 
                                   onClick={() => handleUpdateGameSummary(selectedGameId, (game.scoreHome || 0) + 1, game.scoreAway || 0, game.matchReport || '')}
-                                  style={{ width: '26px', height: '26px', borderRadius: '50%', border: '1px solid var(--primary)', background: 'rgba(46, 204, 113, 0.1)', color: 'var(--primary)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px' }}
+                                  style={{ width: '24px', height: '24px', borderRadius: '50%', border: '1px solid var(--primary)', background: 'rgba(46, 204, 113, 0.1)', color: 'var(--primary)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px' }}
                                 >+</button>
                               </div>
                             </div>
 
                             {/* Separador Centralizado */}
-                            <div style={{ height: '100%', display: 'flex', alignItems: 'center', marginTop: '75px' }}>
-                              <div style={{ fontSize: '1.2rem', fontWeight: '900', color: 'var(--primary)', opacity: 0.3 }}>X</div>
+                            <div style={{ height: '100%', display: 'flex', alignItems: 'center', marginTop: '65px' }}>
+                              <div style={{ fontSize: '1rem', fontWeight: '900', color: 'var(--primary)', opacity: 0.3 }}>X</div>
                             </div>
 
                             {/* Time Visitante */}
                             <div style={{ flex: 1, textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                              <div style={{ width: '60px', height: '60px', marginBottom: '12px', borderRadius: '50%', backgroundColor: 'rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '2px solid #e74c3c', overflow: 'hidden', boxShadow: '0 0 15px rgba(231, 76, 60, 0.2)' }}>
+                              <div style={{ width: '55px', height: '55px', marginBottom: '10px', borderRadius: '50%', backgroundColor: 'rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '2px solid #e74c3c', overflow: 'hidden', boxShadow: '0 0 12px rgba(231, 76, 60, 0.15)' }}>
                                 {game.opponentLogo ? (
                                   <img src={game.opponentLogo} style={{ width: '100%', height: '100%', objectFit: 'contain', mixBlendMode: getBlendMode(game.opponentLogoBg) }} />
                                 ) : (
-                                  <Trophy size={28} color="#e74c3c" />
+                                  <Trophy size={24} color="#e74c3c" />
                                 )}
                               </div>
                               <div style={{ 
                                 fontWeight: '800', 
-                                fontSize: '0.7rem', 
+                                fontSize: '0.65rem', 
                                 color: '#fff', 
-                                marginBottom: '12px', 
-                                minHeight: '2.4rem', 
+                                marginBottom: '10px', 
+                                minHeight: '2.2rem', 
                                 display: 'flex', 
                                 alignItems: 'center', 
                                 justifyContent: 'center',
                                 lineHeight: '1.2',
                                 width: '100%',
-                                padding: '0 4px'
+                                padding: '0 2px'
                               }}>
                                 {game.opponent.toUpperCase()}
                               </div>
-                              <div className="flex items-center justify-center gap-1.5">
+                              <div className="flex items-center justify-center gap-1">
                                 <button 
                                   onClick={() => handleUpdateGameSummary(selectedGameId, game.scoreHome || 0, Math.max(0, (game.scoreAway || 0) - 1), game.matchReport || '')}
-                                  style={{ width: '26px', height: '26px', borderRadius: '50%', border: '1px solid rgba(255,255,255,0.2)', background: 'transparent', color: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px' }}
+                                  style={{ width: '24px', height: '24px', borderRadius: '50%', border: '1px solid rgba(255,255,255,0.2)', background: 'transparent', color: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px' }}
                                 >-</button>
-                                <div style={{ fontSize: '2.2rem', fontWeight: '900', color: '#fff', minWidth: '40px', fontFamily: "'Monospace', sans-serif", textAlign: 'center' }}>{game.scoreAway || 0}</div>
+                                <div style={{ fontSize: '2rem', fontWeight: '900', color: '#fff', minWidth: '35px', fontFamily: "'Monospace', sans-serif", textAlign: 'center' }}>{game.scoreAway || 0}</div>
                                 <button 
                                   onClick={() => handleUpdateGameSummary(selectedGameId, game.scoreHome || 0, (game.scoreAway || 0) + 1, game.matchReport || '')}
-                                  style={{ width: '26px', height: '26px', borderRadius: '50%', border: '1px solid #e74c3c', background: 'rgba(231, 76, 60, 0.1)', color: '#e74c3c', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px' }}
+                                  style={{ width: '24px', height: '24px', borderRadius: '50%', border: '1px solid #e74c3c', background: 'rgba(231, 76, 60, 0.1)', color: '#e74c3c', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px' }}
                                 >+</button>
                               </div>
                             </div>
