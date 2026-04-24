@@ -808,7 +808,7 @@ export default function App() {
             <label style={{ display: 'block', fontSize: '0.75rem', marginBottom: '4px', color: 'var(--text-muted)' }}>CHAVE PIX</label>
             <input 
               type="text" 
-              value={teamConfig.pixKey}
+              value={teamConfig.pixKey || ''}
               onChange={e => setTeamConfig({...teamConfig, pixKey: e.target.value})}
               placeholder="E-mail ou CPF"
               style={{ fontSize: '0.875rem', padding: '8px' }}
@@ -1780,7 +1780,8 @@ export default function App() {
         {/* Modal Convocação */}
         {selectedGameId && (
           (() => {
-            const game = games.find(g => g.id === selectedGameId)!;
+            const game = games.find(g => g.id === selectedGameId);
+            if (!game) { setSelectedGameId(null); return null; }
             return (
               <div className="modal-overlay">
                 <div className="modal-content card" style={{ width: '100%', maxWidth: '600px', maxHeight: '90vh', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
@@ -2072,6 +2073,7 @@ export default function App() {
                               transition: 'all 0.2s'
                             }}
                             onFocus={(e) => e.target.style.borderColor = 'var(--primary)'}
+                            onBlur={(e) => e.target.style.borderColor = 'var(--border)'}
                           />
                           <div style={{ marginTop: '12px', textAlign: 'right' }}>
                             <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>O relatório é salvo automaticamente ao digitar.</span>
@@ -2458,7 +2460,7 @@ export default function App() {
                           <div style={{ textAlign: 'center', marginTop: '30px', zIndex: 2, flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
                             <div style={{ fontSize: '1.3rem', color: 'white', fontWeight: '800', letterSpacing: '4px', textShadow: '2px 2px 4px rgba(0,0,0,0.8)' }}>&Agrave;S</div>
                             <div style={{ fontSize: '4.5rem', fontWeight: '900', color: 'white', lineHeight: '1', textShadow: '4px 4px 0px rgba(0,0,0,0.5), 0 0 30px rgba(255,255,255,0.15)', letterSpacing: '3px' }}>
-                              {game.time}H
+                              {game.time || '--:--'}H
                             </div>
                           </div>
 
@@ -2487,7 +2489,7 @@ export default function App() {
                                 fontSize: '0.85rem',
                                 textShadow: '1px 1px 3px rgba(0,0,0,0.6)'
                               }}>
-                                {game.location.toUpperCase()}
+                                {(game.location || 'LOCAL A DEFINIR').toUpperCase()}
                               </div>
                             </div>
                           </div>

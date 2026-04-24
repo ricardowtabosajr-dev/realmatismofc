@@ -105,8 +105,23 @@ input:focus {
   justify-content: space-between;
 }
 
+.gap-1 { gap: 4px; }
+.gap-1\.5 { gap: 6px; }
 .gap-2 { gap: 8px; }
+.gap-3 { gap: 12px; }
 .gap-4 { gap: 16px; }
+.gap-8 { gap: 32px; }
+
+.flex-col { flex-direction: column; }
+.justify-center { justify-content: center; }
+.text-center { text-align: center; }
+.p-3 { padding: 12px; }
+.text-primary { color: var(--primary); }
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
 
 .nav-item {
   width: 100%;
