@@ -2821,7 +2821,7 @@ export default function App() {
                         </p>
                       ) : (
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', maxHeight: '400px', overflowY: 'auto' }} className="no-scrollbar">
-                          {sortedByAttendance.map((a, i) => {
+                          {sortedByAttendance.map((a) => {
                              const s = stats[a.id];
                              const total = s.present + s.absent;
                              const pct = total > 0 ? Math.round((s.present / total) * 100) : 0;
