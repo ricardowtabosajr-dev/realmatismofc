@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import Cropper from 'react-easy-crop'
-import { Plus, Users, Trophy, LayoutDashboard, Trash2, Edit2, Phone, Calendar, Clock, MapPin, DollarSign, Share2 } from 'lucide-react'
+import { Plus, Users, Trophy, LayoutDashboard, Trash2, Edit2, Phone, Calendar, Clock, MapPin, DollarSign, Share2, BarChart2 } from 'lucide-react'
 import type { Athlete, Game, PlayerPosition, TeamConfig } from './types'
 import { DEFAULT_POSITIONS } from './types'
 import { supabase } from './lib/supabase'
@@ -9,7 +9,7 @@ import { useRef } from 'react'
 import './index.css'
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState<'athletes' | 'games' | 'dashboard' | 'agenda' | 'marketing'>('dashboard')
+  const [activeTab, setActiveTab] = useState<'athletes' | 'games' | 'dashboard' | 'agenda' | 'marketing' | 'estatisticas'>('dashboard')
   const [modalTab, setModalTab] = useState<'squad' | 'summary'>('squad')
   const [selectedGameId, setSelectedGameId] = useState<string | null>(null)
   const [previewGameId, setPreviewGameId] = useState<string | null>(null)
@@ -482,32 +482,17 @@ export default function App() {
   }
 
   const handlePublicConfirmation = async (gameId: string, athleteId: string, status: 'confirmed' | 'declined' | 'pending') => {
-    if (status === 'declined') {
-      // Se recusar, remove completamente da convocação (desmarca a caixinha)
-      setGames(games.map(game => {
-        if (game.id !== gameId) return game
-        return {
-          ...game,
-          squad: game.squad.filter(s => s.athleteId !== athleteId)
-        }
-      }))
-
-      if (supabase) {
-        await supabase.from('squad_entries').delete().eq('game_id', gameId).eq('athlete_id', athleteId)
+    // Atualiza o status sem remover o atleta da convocação para podermos contar a assiduidade
+    setGames(games.map(game => {
+      if (game.id !== gameId) return game
+      return {
+        ...game,
+        squad: game.squad.map(s => s.athleteId === athleteId ? { ...s, status } : s)
       }
-    } else {
-      // Se confirmar ou voltar para pendente, apenas atualiza o status
-      setGames(games.map(game => {
-        if (game.id !== gameId) return game
-        return {
-          ...game,
-          squad: game.squad.map(s => s.athleteId === athleteId ? { ...s, status } : s)
-        }
-      }))
+    }))
 
-      if (supabase) {
-        await supabase.from('squad_entries').update({ status }).eq('game_id', gameId).eq('athlete_id', athleteId)
-      }
+    if (supabase) {
+      await supabase.from('squad_entries').update({ status }).eq('game_id', gameId).eq('athlete_id', athleteId)
     }
   }
 
@@ -931,6 +916,13 @@ export default function App() {
             <Trophy size={20} />
             Jogos
           </button>
+          <button 
+            onClick={() => setActiveTab('estatisticas')}
+            className={`flex items-center gap-2 nav-item ${activeTab === 'estatisticas' ? 'active' : ''}`}
+          >
+            <BarChart2 size={20} />
+            Estatísticas
+          </button>
         </nav>
       </aside>
 
@@ -955,6 +947,10 @@ export default function App() {
         <button onClick={() => setActiveTab('games')} className={`mobile-nav-item ${activeTab === 'games' ? 'active' : ''}`}>
           <Trophy size={20} />
           <span>Jogos</span>
+        </button>
+        <button onClick={() => setActiveTab('estatisticas')} className={`mobile-nav-item ${activeTab === 'estatisticas' ? 'active' : ''}`}>
+          <BarChart2 size={20} />
+          <span>Estatísticas</span>
         </button>
       </nav>
 
@@ -2708,6 +2704,180 @@ export default function App() {
                 )}
               </div>
             </div>
+          </div>
+        )}
+        {activeTab === 'estatisticas' && (
+          <div>
+            <div className="flex flex-mobile-column justify-between items-center gap-4" style={{ marginBottom: '32px' }}>
+              <div>
+                <h1 style={{ marginBottom: '4px' }}>Estatísticas da Equipe</h1>
+                <p className="text-muted">Acompanhe a artilharia, cartões e assiduidade dos atletas.</p>
+              </div>
+            </div>
+
+            {(() => {
+               // Calculate Attendance and Stats
+               const stats: Record<string, { present: number, absent: number, goals: number, yellow: number, red: number }> = {};
+               athletes.forEach(a => {
+                  stats[a.id] = { present: 0, absent: 0, goals: 0, yellow: 0, red: 0 };
+               });
+
+               games.forEach(g => {
+                  // Attendance
+                  g.squad.forEach(s => {
+                     if (stats[s.athleteId]) {
+                        if (s.status === 'confirmed') stats[s.athleteId].present++;
+                        if (s.status === 'declined') stats[s.athleteId].absent++;
+                     }
+                  });
+
+                  // Simple Match Report parsing (Heuristic)
+                  if (g.matchReport) {
+                     const lines = g.matchReport.split('\n');
+                     athletes.forEach(a => {
+                        const firstName = a.name.split(' ')[0].toLowerCase();
+                        lines.forEach(line => {
+                           const lowerLine = line.toLowerCase();
+                           if (lowerLine.includes(firstName)) {
+                              // Count soccer ball emojis
+                              const goals = (line.match(/⚽/g) || []).length;
+                              if (goals > 0) stats[a.id].goals += goals;
+                              
+                              // Check for "gol" keyword if no emoji
+                              if (goals === 0 && (lowerLine.includes('gol') || lowerLine.includes('gols'))) {
+                                 const match = lowerLine.match(new RegExp(`${firstName}\\s*\\(?(\\d+)\\)?`));
+                                 if (match && match[1]) {
+                                    stats[a.id].goals += parseInt(match[1], 10);
+                                 } else {
+                                    stats[a.id].goals += 1;
+                                 }
+                              }
+
+                              // Cards
+                              const yellows = (line.match(/🟨/g) || []).length;
+                              const reds = (line.match(/🟥/g) || []).length;
+                              if (yellows > 0) stats[a.id].yellow += yellows;
+                              if (reds > 0) stats[a.id].red += reds;
+
+                              if (yellows === 0 && lowerLine.includes('amarelo')) stats[a.id].yellow += 1;
+                              if (reds === 0 && lowerLine.includes('vermelho')) stats[a.id].red += 1;
+                           }
+                        });
+                     });
+                  }
+               });
+
+               const sortedByGoals = athletes.filter(a => stats[a.id]?.goals > 0).sort((a, b) => stats[b.id].goals - stats[a.id].goals);
+               const activeAttendance = athletes.filter(a => stats[a.id].present > 0 || stats[a.id].absent > 0);
+               const sortedByAttendance = activeAttendance.sort((a, b) => {
+                  if (stats[b.id].present !== stats[a.id].present) {
+                     return stats[b.id].present - stats[a.id].present; // Mais presenças no topo
+                  }
+                  return stats[a.id].absent - stats[b.id].absent; // Menos faltas vem primeiro em caso de empate
+               });
+
+               const sortedByCards = athletes.filter(a => stats[a.id]?.yellow > 0 || stats[a.id]?.red > 0)
+                  .sort((a, b) => (stats[b.id].red * 3 + stats[b.id].yellow) - (stats[a.id].red * 3 + stats[a.id].yellow));
+
+               return (
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '24px' }}>
+                    {/* Artilharia */}
+                    <div className="card">
+                      <h3 className="flex items-center gap-2" style={{ marginBottom: '16px', color: '#f1c40f' }}>
+                        <Trophy size={20} /> Artilharia
+                      </h3>
+                      {sortedByGoals.length === 0 ? (
+                        <p className="text-muted text-center" style={{ padding: '20px 0', fontSize: '0.85rem' }}>
+                          Nenhum gol registrado.<br/><br/>
+                          <b>Dica:</b> Na Súmula do jogo, escreva o nome do atleta e adicione o emoji ⚽ ou a palavra "gol" (ex: "Ricardo ⚽⚽" ou "Ricardo 2 gols").
+                        </p>
+                      ) : (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', maxHeight: '400px', overflowY: 'auto' }} className="no-scrollbar">
+                          {sortedByGoals.map((a, i) => (
+                            <div key={a.id} className="flex justify-between items-center" style={{ padding: '12px', backgroundColor: 'var(--surface-hover)', borderRadius: '8px' }}>
+                              <div className="flex items-center gap-3">
+                                <div style={{ width: '28px', height: '28px', borderRadius: '50%', backgroundColor: 'rgba(255,255,255,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.8rem', fontWeight: 'bold' }}>
+                                  {i + 1}º
+                                </div>
+                                <span style={{ fontWeight: '600' }}>{a.name}</span>
+                              </div>
+                              <div className="flex items-center gap-1" style={{ fontSize: '1.2rem', fontWeight: 'bold', color: '#f1c40f' }}>
+                                {stats[a.id].goals} ⚽
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Assiduidade */}
+                    <div className="card">
+                      <h3 className="flex items-center gap-2" style={{ marginBottom: '16px', color: 'var(--primary)' }}>
+                        <Users size={20} /> Assiduidade
+                      </h3>
+                      {sortedByAttendance.length === 0 ? (
+                        <p className="text-muted text-center" style={{ padding: '20px 0', fontSize: '0.85rem' }}>
+                          Nenhuma presença ou falta confirmada nos jogos.
+                        </p>
+                      ) : (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', maxHeight: '400px', overflowY: 'auto' }} className="no-scrollbar">
+                          {sortedByAttendance.map((a, i) => {
+                             const s = stats[a.id];
+                             const total = s.present + s.absent;
+                             const pct = total > 0 ? Math.round((s.present / total) * 100) : 0;
+                             return (
+                                <div key={a.id} style={{ padding: '12px', backgroundColor: 'var(--surface-hover)', borderRadius: '8px' }}>
+                                  <div className="flex justify-between items-center" style={{ marginBottom: '8px' }}>
+                                    <div className="flex items-center gap-2">
+                                       <span style={{ fontWeight: '600' }}>{a.name}</span>
+                                    </div>
+                                    <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{s.present} Presenças / {s.absent} Faltas</span>
+                                  </div>
+                                  <div style={{ width: '100%', height: '6px', backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: '3px', overflow: 'hidden' }}>
+                                    <div style={{ width: `${pct}%`, height: '100%', backgroundColor: pct > 50 ? 'var(--primary)' : (pct > 0 ? '#f1c40f' : '#e74c3c') }}></div>
+                                  </div>
+                                </div>
+                             );
+                          })}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Cartões */}
+                    <div className="card">
+                      <h3 className="flex items-center gap-2" style={{ marginBottom: '16px', color: '#e74c3c' }}>
+                        <LayoutDashboard size={20} /> Cartões
+                      </h3>
+                      {sortedByCards.length === 0 ? (
+                        <p className="text-muted text-center" style={{ padding: '20px 0', fontSize: '0.85rem' }}>
+                          Nenhum cartão registrado.<br/><br/>
+                          <b>Dica:</b> Na Súmula, coloque 🟨 ou 🟥 ao lado do nome, ou as palavras "amarelo" / "vermelho".
+                        </p>
+                      ) : (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                          {sortedByCards.map(a => (
+                            <div key={a.id} className="flex justify-between items-center" style={{ padding: '12px', backgroundColor: 'var(--surface-hover)', borderRadius: '8px' }}>
+                              <span style={{ fontWeight: '600' }}>{a.name}</span>
+                              <div className="flex items-center gap-2">
+                                {stats[a.id].yellow > 0 && (
+                                  <div className="flex items-center gap-1" style={{ fontSize: '0.9rem', fontWeight: 'bold' }}>
+                                    {stats[a.id].yellow} <span style={{ color: '#f1c40f' }}>🟨</span>
+                                  </div>
+                                )}
+                                {stats[a.id].red > 0 && (
+                                  <div className="flex items-center gap-1" style={{ fontSize: '0.9rem', fontWeight: 'bold', marginLeft: '8px' }}>
+                                    {stats[a.id].red} <span style={{ color: '#e74c3c' }}>🟥</span>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+               );
+            })()}
           </div>
         )}
       </main>
