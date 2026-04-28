@@ -23,13 +23,14 @@ export interface Game {
   scoreHome?: number;
   scoreAway?: number;
   matchReport?: string;
+  formation?: string;
 }
 
 export interface SquadEntry {
   athleteId: string;
   paid: boolean;
   status?: 'confirmed' | 'declined' | 'pending';
-  isStarter?: boolean;
+  isStarter?: boolean | null;
 }
 
 export interface TeamConfig {

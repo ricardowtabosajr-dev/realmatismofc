@@ -14,6 +14,7 @@ export default function App() {
   const [selectedGameId, setSelectedGameId] = useState<string | null>(null)
   const [previewGameId, setPreviewGameId] = useState<string | null>(null)
   const [publicGameId, setPublicGameId] = useState<string | null>(null)
+  const [dashboardTacticalGameId, setDashboardTacticalGameId] = useState<string | null>(null)
   const [formation, setFormation] = useState<string>(() => {
     return localStorage.getItem('formation') || '4-4-2'
   })
@@ -164,7 +165,7 @@ export default function App() {
             athleteId: s.athlete_id, 
             paid: s.paid,
             status: s.status || 'pending',
-            isStarter: s.is_starter !== undefined ? s.is_starter : true
+            isStarter: s.is_starter !== undefined ? s.is_starter : null
           }))
         })));
       }
@@ -327,7 +328,8 @@ export default function App() {
       squad: newGame.squad || [],
       scoreHome: newGame.scoreHome,
       scoreAway: newGame.scoreAway,
-      matchReport: newGame.matchReport
+      matchReport: newGame.matchReport,
+      formation: newGame.formation || formation
     }
 
     if (newGame.id) {
@@ -407,19 +409,58 @@ export default function App() {
         await supabase.from('squad_entries').delete().eq('game_id', gameId).eq('athlete_id', athleteId);
       }
     } else {
-      const newEntry = { athleteId, paid: false, status: 'confirmed' as const, isStarter: true };
+      const newEntry = { athleteId, paid: false, status: 'pending' as const, isStarter: null };
       setGames(games.map(g => g.id === gameId ? { ...g, squad: [...g.squad, newEntry] } : g));
       if (supabase) {
         await supabase.from('squad_entries').insert({
           game_id: gameId,
           athlete_id: athleteId,
           paid: false,
-          status: 'confirmed',
-          is_starter: true
+          status: 'pending',
+          is_starter: null
         });
       }
     }
   }
+
+  const toggleAllAthletesInSquad = async (gameId: string) => {
+    const game = games.find(g => g.id === gameId);
+    if (!game) return;
+
+    const allSelected = game.squad.length === athletes.length && athletes.length > 0;
+
+    if (allSelected) {
+      // Deselect all
+      setGames(games.map(g => g.id === gameId ? { ...g, squad: [] } : g));
+      if (supabase) {
+        await supabase.from('squad_entries').delete().eq('game_id', gameId);
+      }
+    } else {
+      // Select all missing athletes
+      const currentAthleteIds = new Set(game.squad.map(s => s.athleteId));
+      const athletesToAdd = athletes.filter(a => !currentAthleteIds.has(a.id));
+      
+      const newEntries = athletesToAdd.map(a => ({
+        athleteId: a.id,
+        paid: false,
+        status: 'pending' as const,
+        isStarter: null
+      }));
+
+      setGames(games.map(g => g.id === gameId ? { ...g, squad: [...g.squad, ...newEntries] } : g));
+      
+      if (supabase && athletesToAdd.length > 0) {
+        const insertData = athletesToAdd.map(a => ({
+          game_id: gameId,
+          athlete_id: a.id,
+          paid: false,
+          status: 'pending',
+          is_starter: null
+        }));
+        await supabase.from('squad_entries').insert(insertData);
+      }
+    }
+  };
 
   const togglePaymentStatus = async (gameId: string, athleteId: string) => {
     const game = games.find(g => g.id === gameId);
@@ -1028,7 +1069,21 @@ export default function App() {
                 ) : (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                     {games.slice(-3).reverse().map(game => (
-                      <div key={game.id} className="flex justify-between items-center p-3" style={{ backgroundColor: 'var(--surface-hover)', borderRadius: '8px' }}>
+                      <div 
+                        key={game.id} 
+                        className="flex justify-between items-center p-3" 
+                        style={{ 
+                          backgroundColor: dashboardTacticalGameId === game.id ? 'rgba(46, 204, 113, 0.1)' : 'var(--surface-hover)', 
+                          borderRadius: '8px',
+                          border: dashboardTacticalGameId === game.id ? '1px solid var(--primary)' : '1px solid transparent',
+                          cursor: 'pointer',
+                          transition: 'all 0.2s ease'
+                        }}
+                        onClick={() => {
+                          setDashboardTacticalGameId(game.id);
+                          // Optional: scroll slightly to bring tactical field into view if it's far down
+                        }}
+                      >
                         <div className="flex items-center gap-3">
                           <div style={{ width: '32px', height: '32px', borderRadius: '4px', backgroundColor: 'rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', flexShrink: 0 }}>
                             {game.opponentLogo ? (
@@ -1122,43 +1177,72 @@ export default function App() {
 
               {/* Campo Tático - Próxima Convocação */}
               <div className="card" style={{ flex: 1 }}>
-                <div className="flex justify-between items-center" style={{ marginBottom: '20px' }}>
-                  <h3>Próxima Convocação Tática</h3>
-                  <select
-                    value={formation}
-                    onChange={e => setFormation(e.target.value)}
-                    style={{
-                      padding: '6px 12px',
-                      borderRadius: '8px',
-                      backgroundColor: 'var(--surface-hover)',
-                      border: '1px solid var(--border)',
-                      color: 'var(--text)',
-                      fontSize: '0.8rem',
-                      fontWeight: 700,
-                      cursor: 'pointer'
-                    }}
-                  >
-                    <option value="4-4-2">4-4-2</option>
-                    <option value="4-3-3">4-3-3</option>
-                    <option value="4-5-1">4-5-1</option>
-                    <option value="4-2-3-1">4-2-3-1</option>
-                    <option value="3-5-2">3-5-2</option>
-                    <option value="3-4-3">3-4-3</option>
-                    <option value="5-3-2">5-3-2</option>
-                    <option value="5-4-1">5-4-1</option>
-                  </select>
-                </div>
                 {(() => {
-                  const nextGame = games
-                    .filter(g => new Date(g.date + 'T' + (g.time || '23:59')) >= new Date())
-                    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())[0];
-
-                  if (!nextGame || nextGame.squad.length === 0) {
-                    return <p className="text-muted">{!nextGame ? 'Nenhum jogo futuro agendado.' : 'Nenhum atleta convocado para o próximo jogo.'}</p>;
+                  let nextGame = games.find(g => g.id === dashboardTacticalGameId);
+                  
+                  if (!nextGame) {
+                    nextGame = games
+                      .filter(g => new Date(g.date + 'T' + (g.time || '23:59')) >= new Date())
+                      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())[0];
                   }
 
-                  const starters = nextGame.squad.filter(s => s.isStarter);
-                  const benchEntries = nextGame.squad.filter(s => !s.isStarter);
+                  const isPastGame = nextGame && new Date(nextGame.date + 'T' + (nextGame.time || '23:59')) < new Date();
+                  const gameFormation = nextGame?.formation || formation;
+
+                  return (
+                    <>
+                      <div className="flex justify-between items-center" style={{ marginBottom: '20px' }}>
+                        <h3>{isPastGame ? 'Escalação Tática (Finalizado)' : 'Próxima Convocação Tática'}</h3>
+                        <select
+                          value={isPastGame ? gameFormation : formation}
+                          onChange={e => {
+                            setFormation(e.target.value);
+                            if (nextGame && !isPastGame) {
+                              setGames(games.map(g => g.id === nextGame!.id ? { ...g, formation: e.target.value } : g));
+                              // In a real DB scenario, we would also update Supabase here:
+                              // supabase.from('games').update({ formation: e.target.value }).eq('id', nextGame.id)
+                            }
+                          }}
+                          disabled={isPastGame}
+                          style={{
+                            padding: '6px 12px',
+                            borderRadius: '8px',
+                            backgroundColor: isPastGame ? 'rgba(255,255,255,0.05)' : 'var(--surface-hover)',
+                            border: '1px solid var(--border)',
+                            color: isPastGame ? 'var(--text-muted)' : 'var(--text)',
+                            fontSize: '0.8rem',
+                            fontWeight: 700,
+                            cursor: isPastGame ? 'not-allowed' : 'pointer'
+                          }}
+                        >
+                          <option value="4-4-2">4-4-2</option>
+                          <option value="4-3-3">4-3-3</option>
+                          <option value="4-5-1">4-5-1</option>
+                          <option value="4-2-3-1">4-2-3-1</option>
+                          <option value="3-5-2">3-5-2</option>
+                          <option value="3-4-3">3-4-3</option>
+                          <option value="5-3-2">5-3-2</option>
+                          <option value="5-4-1">5-4-1</option>
+                        </select>
+                      </div>
+                      {(() => {
+
+                  if (!nextGame || nextGame.squad.length === 0) {
+                    return <p className="text-muted">{!nextGame ? 'Nenhum jogo futuro agendado.' : 'Nenhum atleta convocado para este jogo.'}</p>;
+                  }
+
+                  const confirmedCount = nextGame.squad.filter(s => s.status === 'confirmed').length;
+                  if (confirmedCount === 0) {
+                    return (
+                      <div style={{ textAlign: 'center', padding: '20px', backgroundColor: 'rgba(255,255,255,0.02)', borderRadius: '12px' }}>
+                        <Clock size={24} className="text-muted" style={{ marginBottom: '8px' }} />
+                        <p className="text-muted">Aguardando confirmações dos atletas para montar o campo...</p>
+                      </div>
+                    );
+                  }
+
+                  const starters = nextGame.squad.filter(s => s.isStarter === true && s.status === 'confirmed');
+                  const benchEntries = nextGame.squad.filter(s => s.isStarter !== true && s.status === 'confirmed');
                   
                   const starterAthletes = athletes.filter(a => starters.some(s => s.athleteId === a.id));
                   const benchList = athletes.filter(a => benchEntries.some(s => s.athleteId === a.id));
@@ -1228,7 +1312,7 @@ export default function App() {
                     ],
                   };
 
-                  const slots = F[formation] || F['4-4-2'];
+                  const slots = F[isPastGame ? gameFormation : formation] || F['4-4-2'];
                   const gk = starterAthletes.filter(a => a.position === 'Goleiro');
                   const outfield = starterAthletes.filter(a => a.position !== 'Goleiro');
                   
@@ -1377,6 +1461,9 @@ export default function App() {
                         <div className="flex items-center gap-1"><div style={{ width: '10px', height: '10px', borderRadius: '50%', backgroundColor: '#f39c12' }}></div><span style={{ fontSize: '0.65rem' }}>Goleiro</span></div>
                       </div>
                     </div>
+                  );
+                })()}
+                    </>
                   );
                 })()}
               </div>
@@ -1867,7 +1954,16 @@ export default function App() {
                     {modalTab === 'squad' ? (
                       <>
                         <div className="flex justify-between items-center" style={{ marginBottom: '16px' }}>
-                          <h4 style={{ margin: 0 }}>Selecione os Atletas</h4>
+                          <div className="flex items-center gap-3">
+                            <input
+                              type="checkbox"
+                              checked={game.squad.length === athletes.length && athletes.length > 0}
+                              onChange={() => toggleAllAthletesInSquad(selectedGameId)}
+                              style={{ width: '20px', height: '20px', cursor: 'pointer' }}
+                              title={game.squad.length === athletes.length && athletes.length > 0 ? "Desmarcar Todos" : "Selecionar Todos"}
+                            />
+                            <h4 style={{ margin: 0 }}>Selecione os Atletas</h4>
+                          </div>
                           <button 
                             onClick={() => generateWhatsAppText(selectedGameId)}
                             className="btn-primary flex items-center gap-2"
@@ -1912,9 +2008,9 @@ export default function App() {
                                           fontSize: '0.65rem', 
                                           padding: '2px 8px', 
                                           borderRadius: '4px', 
-                                          backgroundColor: squadMember?.isStarter ? 'rgba(46, 204, 113, 0.2)' : 'rgba(255,255,255,0.05)',
-                                          color: squadMember?.isStarter ? 'var(--primary)' : 'var(--text-muted)',
-                                          border: squadMember?.isStarter ? '1px solid var(--primary)' : '1px solid var(--border)',
+                                          backgroundColor: squadMember?.isStarter === true ? 'rgba(46, 204, 113, 0.2)' : 'rgba(255,255,255,0.05)',
+                                          color: squadMember?.isStarter === true ? 'var(--primary)' : 'var(--text-muted)',
+                                          border: squadMember?.isStarter === true ? '1px solid var(--primary)' : '1px solid var(--border)',
                                           cursor: 'pointer'
                                         }}
                                       >
@@ -1926,9 +2022,9 @@ export default function App() {
                                           fontSize: '0.65rem', 
                                           padding: '2px 8px', 
                                           borderRadius: '4px', 
-                                          backgroundColor: (isInSquad && !squadMember?.isStarter) ? 'rgba(52, 152, 219, 0.2)' : 'rgba(255,255,255,0.05)',
-                                          color: (isInSquad && !squadMember?.isStarter) ? '#3498db' : 'var(--text-muted)',
-                                          border: (isInSquad && !squadMember?.isStarter) ? '1px solid #3498db' : '1px solid var(--border)',
+                                          backgroundColor: squadMember?.isStarter === false ? 'rgba(52, 152, 219, 0.2)' : 'rgba(255,255,255,0.05)',
+                                          color: squadMember?.isStarter === false ? '#3498db' : 'var(--text-muted)',
+                                          border: squadMember?.isStarter === false ? '1px solid #3498db' : '1px solid var(--border)',
                                           cursor: 'pointer'
                                         }}
                                       >

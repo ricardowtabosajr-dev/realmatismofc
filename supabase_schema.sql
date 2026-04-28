@@ -28,6 +28,7 @@ CREATE TABLE IF NOT EXISTS public.games (
     opponent_logo_bg TEXT,
     date DATE NOT NULL,
     time TEXT,
+    formation TEXT DEFAULT '4-4-2',
     location TEXT,
     fee NUMERIC DEFAULT 0,
     score_home INTEGER,
