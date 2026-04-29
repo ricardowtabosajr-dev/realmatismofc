@@ -137,37 +137,69 @@ export default function App() {
   // Initial fetch from Supabase if available
   useEffect(() => {
     const fetchData = async () => {
-      if (!supabase) return;
+      if (!supabase) {
+        console.log('[Supabase] Não conectado - usando apenas localStorage');
+        return;
+      }
 
-      const { data: athletesData } = await supabase.from('athletes').select('*');
-      if (athletesData) {
+      console.log('[Supabase] Buscando dados do banco...');
+
+      const { data: athletesData, error: athletesError } = await supabase.from('athletes').select('*');
+      if (athletesError) {
+        console.error('[Supabase] Erro ao buscar atletas:', athletesError);
+      } else if (athletesData) {
+        console.log(`[Supabase] ${athletesData.length} atletas carregados`);
         setAthletes(athletesData.map(a => ({
           ...a,
           avatarUrl: a.avatar_url
         })));
       }
 
-      const { data: gamesData } = await supabase.from('games').select('*, squad:squad_entries(*)');
-      if (gamesData) {
-        setGames(gamesData.map(g => ({
-          id: g.id,
-          opponent: g.opponent,
-          opponentLogo: g.opponent_logo,
-          opponentLogoBg: g.opponent_logo_bg,
-          date: g.date,
-          time: g.time,
-          location: g.location,
-          fee: g.fee,
-          scoreHome: g.score_home,
-          scoreAway: g.score_away,
-          matchReport: g.match_report,
-          squad: g.squad.map((s: any) => ({ 
-            athleteId: s.athlete_id, 
-            paid: s.paid,
-            status: s.status || 'pending',
-            isStarter: s.is_starter !== undefined ? s.is_starter : null
-          }))
-        })));
+      const { data: gamesData, error: gamesError } = await supabase.from('games').select('*, squad:squad_entries(*)');
+      if (gamesError) {
+        console.error('[Supabase] Erro ao buscar jogos:', gamesError);
+      } else if (gamesData) {
+        console.log(`[Supabase] ${gamesData.length} jogos carregados`);
+        
+        // Get current games from localStorage to preserve any data Supabase might not have
+        const localGamesRaw = localStorage.getItem('games');
+        const localGames: Game[] = localGamesRaw ? JSON.parse(localGamesRaw) : [];
+        const localGamesMap = new Map(localGames.map(g => [g.id, g]));
+        
+        setGames(gamesData.map(g => {
+          const localGame = localGamesMap.get(g.id);
+          
+          // Use Supabase data as primary, but fall back to localStorage for match report fields
+          // This handles the case where RLS was blocking writes
+          const scoreHome = g.score_home ?? localGame?.scoreHome;
+          const scoreAway = g.score_away ?? localGame?.scoreAway;
+          const matchReport = g.match_report ?? localGame?.matchReport;
+          
+          if (localGame?.matchReport && !g.match_report) {
+            console.warn(`[Supabase] Jogo vs ${g.opponent}: match_report está NULL no banco mas existe no localStorage. Possível falha de escrita no banco.`);
+          }
+          
+          return {
+            id: g.id,
+            opponent: g.opponent,
+            opponentLogo: g.opponent_logo,
+            opponentLogoBg: g.opponent_logo_bg,
+            date: g.date,
+            time: g.time,
+            location: g.location,
+            fee: g.fee,
+            scoreHome,
+            scoreAway,
+            matchReport,
+            formation: g.formation,
+            squad: g.squad.map((s: any) => ({ 
+              athleteId: s.athlete_id, 
+              paid: s.paid,
+              status: s.status || 'pending',
+              isStarter: s.is_starter !== undefined ? s.is_starter : null
+            }))
+          };
+        }));
       }
 
       const { data: positionsData } = await supabase.from('positions').select('name');

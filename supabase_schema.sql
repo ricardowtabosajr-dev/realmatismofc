@@ -61,18 +61,23 @@ CREATE TABLE IF NOT EXISTS public.team_config (
 -- Inserir configuração inicial
 INSERT INTO public.team_config (id, name) VALUES (1, 'RealMatismo') ON CONFLICT DO NOTHING;
 
--- Habilitar RLS (Opcional, mas recomendado)
+-- Habilitar RLS com permissão total (leitura E escrita)
 ALTER TABLE public.positions ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "Allow public all" ON public.positions FOR ALL USING (true);
+DROP POLICY IF EXISTS "Allow public all" ON public.positions;
+CREATE POLICY "Allow public all" ON public.positions FOR ALL USING (true) WITH CHECK (true);
 
 ALTER TABLE public.athletes ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "Allow public all" ON public.athletes FOR ALL USING (true);
+DROP POLICY IF EXISTS "Allow public all" ON public.athletes;
+CREATE POLICY "Allow public all" ON public.athletes FOR ALL USING (true) WITH CHECK (true);
 
 ALTER TABLE public.games ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "Allow public all" ON public.games FOR ALL USING (true);
+DROP POLICY IF EXISTS "Allow public all" ON public.games;
+CREATE POLICY "Allow public all" ON public.games FOR ALL USING (true) WITH CHECK (true);
 
 ALTER TABLE public.squad_entries ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "Allow public all" ON public.squad_entries FOR ALL USING (true);
+DROP POLICY IF EXISTS "Allow public all" ON public.squad_entries;
+CREATE POLICY "Allow public all" ON public.squad_entries FOR ALL USING (true) WITH CHECK (true);
 
 ALTER TABLE public.team_config ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "Allow public all" ON public.team_config FOR ALL USING (true);
+DROP POLICY IF EXISTS "Allow public all" ON public.team_config;
+CREATE POLICY "Allow public all" ON public.team_config FOR ALL USING (true) WITH CHECK (true);
