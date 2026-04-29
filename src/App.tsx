@@ -316,6 +316,10 @@ export default function App() {
     e.preventDefault()
     if (!newGame.opponent || !newGame.date) return
 
+    const isEditing = !!newGame.id;
+    // When editing, preserve existing score/report/formation from the current game state
+    const existingGame = isEditing ? games.find(g => g.id === newGame.id) : null;
+
     const game: Game = {
       id: newGame.id || crypto.randomUUID(),
       opponent: newGame.opponent,
@@ -325,21 +329,22 @@ export default function App() {
       time: newGame.time || '',
       location: newGame.location || '',
       fee: newGame.fee || 30,
-      squad: newGame.squad || [],
-      scoreHome: newGame.scoreHome,
-      scoreAway: newGame.scoreAway,
-      matchReport: newGame.matchReport,
-      formation: newGame.formation || formation
+      squad: newGame.squad || existingGame?.squad || [],
+      scoreHome: newGame.scoreHome ?? existingGame?.scoreHome,
+      scoreAway: newGame.scoreAway ?? existingGame?.scoreAway,
+      matchReport: newGame.matchReport ?? existingGame?.matchReport,
+      formation: newGame.formation || existingGame?.formation || formation
     }
 
-    if (newGame.id) {
+    if (isEditing) {
       setGames(prev => prev.map(g => g.id === newGame.id ? game : g))
     } else {
       setGames(prev => [...prev, game])
     }
 
     if (supabase) {
-      await supabase.from('games').upsert({
+      // Build the upsert data, always including core fields
+      const upsertData: Record<string, any> = {
         id: game.id,
         opponent: game.opponent,
         opponent_logo: game.opponentLogo,
@@ -348,10 +353,21 @@ export default function App() {
         time: game.time,
         location: game.location,
         fee: game.fee,
-        score_home: game.scoreHome,
-        score_away: game.scoreAway,
-        match_report: game.matchReport
-      })
+        formation: game.formation
+      };
+
+      // Only include score/report if they have actual values to avoid nullifying existing data
+      if (game.scoreHome !== undefined && game.scoreHome !== null) {
+        upsertData.score_home = game.scoreHome;
+      }
+      if (game.scoreAway !== undefined && game.scoreAway !== null) {
+        upsertData.score_away = game.scoreAway;
+      }
+      if (game.matchReport !== undefined && game.matchReport !== null) {
+        upsertData.match_report = game.matchReport;
+      }
+
+      await supabase.from('games').upsert(upsertData);
     }
 
     setNewGame({ opponent: '', opponentLogo: '', opponentLogoBg: 'dark', date: '', time: '', location: '', fee: 30 })
