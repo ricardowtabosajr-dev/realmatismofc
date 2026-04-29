@@ -247,9 +247,9 @@ export default function App() {
     }
 
     if (newAthlete.id) {
-      setAthletes(athletes.map(a => a.id === newAthlete.id ? athlete : a))
+      setAthletes(prev => prev.map(a => a.id === newAthlete.id ? athlete : a))
     } else {
-      setAthletes([...athletes, athlete])
+      setAthletes(prev => [...prev, athlete])
     }
     
     if (supabase) {
@@ -333,9 +333,9 @@ export default function App() {
     }
 
     if (newGame.id) {
-      setGames(games.map(g => g.id === newGame.id ? game : g))
+      setGames(prev => prev.map(g => g.id === newGame.id ? game : g))
     } else {
-      setGames([...games, game])
+      setGames(prev => [...prev, game])
     }
 
     if (supabase) {
@@ -359,13 +359,22 @@ export default function App() {
   }
 
   const handleUpdateGameSummary = async (gameId: string, scoreHome: number, scoreAway: number, matchReport: string) => {
-    setGames(games.map(g => g.id === gameId ? { ...g, scoreHome, scoreAway, matchReport } : g));
+    setGames(prev => prev.map(g => g.id === gameId ? { ...g, scoreHome, scoreAway, matchReport } : g));
+    
     if (supabase) {
-      await supabase.from('games').update({
-        score_home: scoreHome,
-        score_away: scoreAway,
-        match_report: matchReport
-      }).eq('id', gameId);
+      try {
+        const { error } = await supabase.from('games').update({
+          score_home: scoreHome,
+          score_away: scoreAway,
+          match_report: matchReport
+        }).eq('id', gameId);
+        
+        if (error) {
+          console.error('Error updating game summary:', error);
+        }
+      } catch (err) {
+        console.error('Unexpected error updating game summary:', err);
+      }
     }
   }
 
@@ -384,7 +393,7 @@ export default function App() {
       );
     }
 
-    setGames(games.map(g => g.id === gameId ? { ...g, squad: updatedSquad } : g));
+    setGames(prev => prev.map(g => g.id === gameId ? { ...g, squad: updatedSquad } : g));
 
     const entry = updatedSquad?.find(s => s.athleteId === athleteId);
     if (supabase && entry) {
@@ -404,13 +413,13 @@ export default function App() {
     const isInSquad = game.squad.find(s => s.athleteId === athleteId);
     
     if (isInSquad) {
-      setGames(games.map(g => g.id === gameId ? { ...g, squad: g.squad.filter(s => s.athleteId !== athleteId) } : g));
+      setGames(prev => prev.map(g => g.id === gameId ? { ...g, squad: g.squad.filter(s => s.athleteId !== athleteId) } : g));
       if (supabase) {
         await supabase.from('squad_entries').delete().eq('game_id', gameId).eq('athlete_id', athleteId);
       }
     } else {
       const newEntry = { athleteId, paid: false, status: 'pending' as const, isStarter: null };
-      setGames(games.map(g => g.id === gameId ? { ...g, squad: [...g.squad, newEntry] } : g));
+      setGames(prev => prev.map(g => g.id === gameId ? { ...g, squad: [...g.squad, newEntry] } : g));
       if (supabase) {
         await supabase.from('squad_entries').insert({
           game_id: gameId,
@@ -431,7 +440,7 @@ export default function App() {
 
     if (allSelected) {
       // Deselect all
-      setGames(games.map(g => g.id === gameId ? { ...g, squad: [] } : g));
+      setGames(prev => prev.map(g => g.id === gameId ? { ...g, squad: [] } : g));
       if (supabase) {
         await supabase.from('squad_entries').delete().eq('game_id', gameId);
       }
@@ -447,7 +456,7 @@ export default function App() {
         isStarter: null
       }));
 
-      setGames(games.map(g => g.id === gameId ? { ...g, squad: [...g.squad, ...newEntries] } : g));
+      setGames(prev => prev.map(g => g.id === gameId ? { ...g, squad: [...g.squad, ...newEntries] } : g));
       
       if (supabase && athletesToAdd.length > 0) {
         const insertData = athletesToAdd.map(a => ({
@@ -468,7 +477,7 @@ export default function App() {
     const entry = game.squad.find(s => s.athleteId === athleteId);
     if (!entry) return;
 
-    setGames(games.map(game => {
+    setGames(prev => prev.map(game => {
       if (game.id !== gameId) return game
       return {
         ...game,
@@ -483,7 +492,7 @@ export default function App() {
 
   const handlePublicConfirmation = async (gameId: string, athleteId: string, status: 'confirmed' | 'declined' | 'pending') => {
     // Atualiza o status sem remover o atleta da convocação para podermos contar a assiduidade
-    setGames(games.map(game => {
+    setGames(prev => prev.map(game => {
       if (game.id !== gameId) return game
       return {
         ...game,
@@ -600,7 +609,7 @@ export default function App() {
 
   const deleteAthlete = async (id: string) => {
     if (confirm('Tem certeza que deseja remover este atleta?')) {
-      setAthletes(athletes.filter(a => a.id !== id))
+      setAthletes(prev => prev.filter(a => a.id !== id))
       if (supabase) {
         await supabase.from('athletes').delete().eq('id', id)
       }
@@ -609,7 +618,7 @@ export default function App() {
 
   const deleteGame = async (id: string) => {
     if (confirm('Tem certeza que deseja remover este jogo?')) {
-      setGames(games.filter(g => g.id !== id))
+      setGames(prev => prev.filter(g => g.id !== id))
       if (supabase) {
         await supabase.from('games').delete().eq('id', id)
       }
@@ -1177,12 +1186,14 @@ export default function App() {
                   let nextGame = games.find(g => g.id === dashboardTacticalGameId);
                   
                   if (!nextGame) {
+                    const today = new Date().toISOString().split('T')[0];
                     nextGame = games
-                      .filter(g => new Date(g.date + 'T' + (g.time || '23:59')) >= new Date())
+                      .filter(g => g.date >= today)
                       .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())[0];
                   }
 
-                  const isPastGame = nextGame && new Date(nextGame.date + 'T' + (nextGame.time || '23:59')) < new Date();
+                  const today = new Date().toISOString().split('T')[0];
+                  const isPastGame = nextGame && nextGame.date < today;
                   const gameFormation = nextGame?.formation || formation;
 
                   return (
@@ -2277,13 +2288,17 @@ export default function App() {
                   <Clock size={20} /> Próximas Partidas
                 </h2>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                  {games.filter(g => new Date(g.date) >= new Date(new Date().setHours(0,0,0,0))).length === 0 ? (
-                    <div className="card" style={{ textAlign: 'center', padding: '40px' }}>
-                      <p className="text-muted">Nenhum jogo futuro marcado.</p>
-                    </div>
-                  ) : (
-                    games
-                      .filter(g => new Date(g.date) >= new Date(new Date().setHours(0,0,0,0)))
+                  {(() => {
+                    const today = new Date().toISOString().split('T')[0];
+                    const futureGames = games.filter(g => g.date >= today);
+                    if (futureGames.length === 0) {
+                      return (
+                        <div className="card" style={{ textAlign: 'center', padding: '40px' }}>
+                          <p className="text-muted">Nenhum jogo futuro marcado.</p>
+                        </div>
+                      );
+                    }
+                    return futureGames
                       .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
                       .map(game => (
                         <div key={game.id} className="card flex justify-between items-center" style={{ borderLeft: '4px solid var(--primary)' }}>
@@ -2313,8 +2328,8 @@ export default function App() {
                           </div>
                           <button onClick={() => setSelectedGameId(game.id)} className="btn-secondary" style={{ padding: '8px 16px' }}>Ver Detalhes</button>
                         </div>
-                      ))
-                  )}
+                      ));
+                  })()}
                 </div>
               </section>
 
@@ -2324,11 +2339,13 @@ export default function App() {
                   <Calendar size={20} /> Histórico de Partidas
                 </h2>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', opacity: 0.8 }}>
-                  {games.filter(g => new Date(g.date) < new Date(new Date().setHours(0,0,0,0))).length === 0 ? (
-                    <p className="text-muted" style={{ paddingLeft: '20px' }}>Nenhum jogo realizado ainda.</p>
-                  ) : (
-                    games
-                      .filter(g => new Date(g.date) < new Date(new Date().setHours(0,0,0,0)))
+                  {(() => {
+                    const today = new Date().toISOString().split('T')[0];
+                    const pastGames = games.filter(g => g.date < today);
+                    if (pastGames.length === 0) {
+                      return <p className="text-muted" style={{ paddingLeft: '20px' }}>Nenhum jogo realizado ainda.</p>;
+                    }
+                    return pastGames
                       .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
                       .map(game => (
                         <div key={game.id} className="card flex justify-between items-center" style={{ backgroundColor: 'rgba(255,255,255,0.02)' }}>
@@ -2356,8 +2373,8 @@ export default function App() {
                             <button onClick={() => setSelectedGameId(game.id)} className="btn-secondary" style={{ padding: '6px 12px', fontSize: '0.8rem' }}>Ver Detalhes</button>
                           </div>
                         </div>
-                      ))
-                  )}
+                      ));
+                  })()}
                 </div>
               </section>
             </div>
