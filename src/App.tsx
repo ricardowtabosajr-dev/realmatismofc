@@ -166,17 +166,25 @@ export default function App() {
         const localGames: Game[] = localGamesRaw ? JSON.parse(localGamesRaw) : [];
         const localGamesMap = new Map(localGames.map(g => [g.id, g]));
         
-        setGames(gamesData.map(g => {
+        // Collect games that need to be synced UP to Supabase
+        const gamesToSync: { id: string; score_home?: number; score_away?: number; match_report?: string }[] = [];
+        
+        const mergedGames = gamesData.map(g => {
           const localGame = localGamesMap.get(g.id);
           
           // Use Supabase data as primary, but fall back to localStorage for match report fields
-          // This handles the case where RLS was blocking writes
           const scoreHome = g.score_home ?? localGame?.scoreHome;
           const scoreAway = g.score_away ?? localGame?.scoreAway;
           const matchReport = g.match_report ?? localGame?.matchReport;
           
-          if (localGame?.matchReport && !g.match_report) {
-            console.warn(`[Supabase] Jogo vs ${g.opponent}: match_report está NULL no banco mas existe no localStorage. Possível falha de escrita no banco.`);
+          // If localStorage has data that Supabase doesn't, queue it for sync
+          if (localGame && (!g.match_report && localGame.matchReport || g.score_home == null && localGame.scoreHome != null || g.score_away == null && localGame.scoreAway != null)) {
+            const syncData: any = { id: g.id };
+            if (!g.match_report && localGame.matchReport) syncData.match_report = localGame.matchReport;
+            if (g.score_home == null && localGame.scoreHome != null) syncData.score_home = localGame.scoreHome;
+            if (g.score_away == null && localGame.scoreAway != null) syncData.score_away = localGame.scoreAway;
+            gamesToSync.push(syncData);
+            console.warn(`[Supabase] Jogo vs ${g.opponent}: dados faltando no banco. Sincronizando localStorage → Supabase...`);
           }
           
           return {
@@ -199,7 +207,23 @@ export default function App() {
               isStarter: s.is_starter !== undefined ? s.is_starter : null
             }))
           };
-        }));
+        });
+        
+        setGames(mergedGames);
+        
+        // Sync missing data from localStorage up to Supabase
+        if (gamesToSync.length > 0) {
+          console.log(`[Supabase] Sincronizando ${gamesToSync.length} jogo(s) para o banco...`);
+          for (const gameSync of gamesToSync) {
+            const { id, ...updateData } = gameSync;
+            const { error: syncError } = await supabase.from('games').update(updateData).eq('id', id);
+            if (syncError) {
+              console.error(`[Supabase] Erro ao sincronizar jogo ${id}:`, syncError);
+            } else {
+              console.log(`[Supabase] Jogo ${id} sincronizado com sucesso!`);
+            }
+          }
+        }
       }
 
       const { data: positionsData } = await supabase.from('positions').select('name');
